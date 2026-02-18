@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -275,7 +274,7 @@ export default function AdminPage() {
               <p className="text-[10px] font-bold text-[#00F0FF] uppercase mb-2 flex items-center gap-2">
                 <Globe className="w-3 h-3" /> Paso 1: Autorizar Dominio
               </p>
-              <p className="text-[10px] text-white/60 mb-2 leading-tight">Copia esto en Authentication > Settings > Authorized domains:</p>
+              <p className="text-[10px] text-white/60 mb-2 leading-tight">Copia esto en Authentication &gt; Settings &gt; Authorized domains:</p>
               <div className="flex gap-2 items-center bg-black/40 p-2 rounded border border-white/10">
                 <code className="text-[9px] flex-1 truncate text-white">{typeof window !== 'undefined' ? window.location.hostname : ''}</code>
                 <Button size="icon" variant="ghost" className="h-6 w-6 text-[#00F0FF]" onClick={() => {
