@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'BarPool - Noche de Neón Eléctrico',
-  description: 'Menú futurista para la mejor experiencia de billar.',
+  title: 'Mr. Smith Bar Pool - Noche de Neón Eléctrico',
+  description: 'Menú futurista para la mejor experiencia de billar en Mr. Smith.',
 };
 
 export default function RootLayout({

@@ -1,4 +1,3 @@
-
 {
   "placeholderImages": [
     {
@@ -21,15 +20,15 @@
     },
     {
       "id": "food-1",
-      "description": "Gourmet Burger",
-      "imageUrl": "https://picsum.photos/seed/burger1/400/500",
-      "imageHint": "burger neon"
+      "description": "Panchos Mr. Smith",
+      "imageUrl": "https://picsum.photos/seed/hotdog/400/500",
+      "imageHint": "hotdog"
     },
     {
       "id": "food-2",
-      "description": "Loaded Nachos",
-      "imageUrl": "https://picsum.photos/seed/nachos1/400/500",
-      "imageHint": "nachos food"
+      "description": "Maní Salado",
+      "imageUrl": "https://picsum.photos/seed/peanuts/400/500",
+      "imageHint": "peanuts"
     },
     {
       "id": "billiards-1",

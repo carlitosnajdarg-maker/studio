@@ -50,19 +50,19 @@ const MENU_DATA: MenuItemProps[] = [
   // Food
   {
     id: "f1",
-    title: "Cyber Burger 2077",
+    title: "Panchos Mr. Smith",
     category: "Comidas",
-    description: "Carne madurada, queso cheddar fundido, cebolla caramelizada y salsa secreta magenta.",
-    price: 14900,
+    description: "Salchicha premium, pan artesanal, lluvia de papas pay y nuestra salsa secreta magenta.",
+    price: 8500,
     imageUrl: PlaceHolderImages.find(img => img.id === 'food-1')?.imageUrl || "",
-    metadata: "Extremadamente Picante",
+    metadata: "Clásico del Bar",
   },
   {
     id: "f2",
-    title: "Nachos Ultravioleta",
+    title: "Maní Salado",
     category: "Comidas",
-    description: "Tortillas de maíz azul, guacamole artesanal, pico de gallo y sour cream.",
-    price: 11500,
+    description: "El acompañamiento perfecto para tu cerveza. Siempre fresco y crujiente.",
+    price: 3500,
     imageUrl: PlaceHolderImages.find(img => img.id === 'food-2')?.imageUrl || "",
   },
   // Tokens
@@ -101,8 +101,9 @@ export default function Home() {
       <header className="px-5 pt-10 pb-6">
         <div className="flex flex-col gap-1">
           <p className="text-[#00F0FF] text-xs font-bold uppercase tracking-widest">Bienvenido a</p>
-          <h1 className="text-5xl font-headline font-bold uppercase leading-none">BarPool</h1>
-          <p className="text-[#B0B0B0] mt-2 max-w-[280px]">Disfruta del mejor pool con un ambiente futurista y cócteles de autor.</p>
+          <h1 className="text-4xl font-headline font-bold uppercase leading-tight text-[#FF008A]">Mr. Smith</h1>
+          <h2 className="text-2xl font-headline font-bold uppercase tracking-tighter text-[#00F0FF] -mt-1">Bar Pool</h2>
+          <p className="text-[#B0B0B0] mt-2 max-w-[280px]">Disfruta del mejor pool en un ambiente eléctrico y futurista.</p>
         </div>
       </header>
 
@@ -133,7 +134,7 @@ export default function Home() {
 
       {/* Footer Branding */}
       <footer className="mt-12 mb-20 text-center opacity-20">
-        <p className="font-headline uppercase tracking-tighter text-sm">Electric Neon Night v1.0</p>
+        <p className="font-headline uppercase tracking-tighter text-sm">Mr. Smith Electric Neon v1.1</p>
       </footer>
     </div>
   )
