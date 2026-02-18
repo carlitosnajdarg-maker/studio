@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Configuración de seguridad para el panel administrativo.
  * 
@@ -7,7 +6,8 @@
  */
 
 export const ADMIN_WHITELIST = [
-  "arrozitocarlos1@gmail.com", // Acceso principal solicitado
+  "arrozitocarlos1@gmail.com",
+  "carlitosnajdarg@gmail.com", // Nuevo administrador añadido
   "admin@mrsmithbarpool.com"
 ];
 
