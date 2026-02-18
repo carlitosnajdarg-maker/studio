@@ -84,6 +84,14 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "staffId", "score", "createdAt"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "type": "object",
+      "description": "Configuración global del bar.",
+      "properties": {
+        "publicUrl": { "type": "string", "description": "URL para el código QR." }
+      }
     }
   },
   "auth": {
@@ -110,6 +118,10 @@
       {
         "path": "/ratings/{ratingId}",
         "definition": { "entityName": "Rating", "description": "Calificaciones del staff." }
+      },
+      {
+        "path": "/settings/general",
+        "definition": { "entityName": "Settings", "description": "Configuraciones globales." }
       }
     ]
   }
