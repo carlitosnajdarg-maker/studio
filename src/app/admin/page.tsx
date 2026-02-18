@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -123,7 +124,7 @@ export default function AdminPage() {
           <CardHeader className="text-center pt-8">
             <ShieldCheck className="w-12 h-12 text-[#FF008A] mx-auto mb-4" />
             <CardTitle className="text-3xl font-headline text-white uppercase leading-none">Acceso Personal</CardTitle>
-            <p className="text-[#B0B0B0] text-sm mt-2">Mr. Smith Bar Pool</p>
+            <p className="text-[#B0B0B0] text-sm mt-2">Mr. Smith - El Mejor Bar Pool de la Costa</p>
           </CardHeader>
           <CardContent className="flex flex-col gap-6 pb-10">
             <div className="bg-[#FF008A]/5 border border-[#FF008A]/20 p-4 rounded-xl space-y-3">
@@ -139,7 +140,7 @@ export default function AdminPage() {
               Entrar con Google
             </Button>
             <Link href="/" className="text-center text-xs text-[#00F0FF] hover:underline flex items-center justify-center gap-2 mt-2">
-              <ArrowLeft className="w-4 h-4" /> Volver al menú público
+              <ArrowLeft className="w-4 h-4" /> Volver al menú de la costa
             </Link>
           </CardContent>
         </Card>
@@ -281,7 +282,7 @@ export default function AdminPage() {
       <div className="fixed bottom-0 left-0 right-0 p-4 flex justify-center bg-[#120108]/80 backdrop-blur-xl border-t border-white/5 z-50">
          <Link href="/">
           <Button variant="ghost" className="text-[#00F0FF] font-bold uppercase text-xs tracking-widest">
-             <ArrowLeft className="mr-2 w-4 h-4" /> Volver al Menú Neón
+             <ArrowLeft className="mr-2 w-4 h-4" /> Volver al menú del mejor bar pool de la costa
           </Button>
          </Link>
       </div>

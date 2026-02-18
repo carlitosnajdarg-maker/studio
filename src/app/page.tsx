@@ -71,10 +71,10 @@ export default function Home() {
     <div className="min-h-screen pb-32 bg-[#120108]">
       <header className="px-5 pt-10 pb-6 flex justify-between items-start max-w-4xl mx-auto">
         <div className="flex flex-col gap-1">
-          <p className="text-[#00F0FF] text-[10px] font-bold uppercase tracking-[0.3em]">Bienvenido a</p>
+          <p className="text-[#00F0FF] text-[10px] font-bold uppercase tracking-[0.3em]">Bienvenido al</p>
           <h1 className="text-4xl font-headline font-bold uppercase leading-tight text-[#FF008A] tracking-tighter">Mr. Smith</h1>
-          <h2 className="text-2xl font-headline font-bold uppercase tracking-tighter text-[#00F0FF] -mt-1 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">Bar Pool</h2>
-          <p className="text-[#B0B0B0] mt-3 max-w-[280px] text-sm leading-relaxed">Disfruta del mejor pool en un ambiente eléctrico y futurista.</p>
+          <h2 className="text-2xl font-headline font-bold uppercase tracking-tighter text-[#00F0FF] -mt-1 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">Mejor Bar Pool de la Costa</h2>
+          <p className="text-[#B0B0B0] mt-3 max-w-[280px] text-sm leading-relaxed">Disfruta del mejor pool en un ambiente eléctrico y futurista frente al mar.</p>
         </div>
         
         <div className="flex gap-2">
@@ -100,7 +100,7 @@ export default function Home() {
                 <div className="bg-white p-4 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.1)]">
                   {currentUrl && <QRCodeSVG value={currentUrl} size={180} />}
                 </div>
-                <p className="text-center text-xs text-[#B0B0B0] px-2 font-medium">Escanea este código para acceder al menú digital de Mr. Smith Bar Pool.</p>
+                <p className="text-center text-xs text-[#B0B0B0] px-2 font-medium">Escanea este código para acceder al menú del mejor bar pool de la costa.</p>
               </div>
             </DialogContent>
           </Dialog>
@@ -117,7 +117,7 @@ export default function Home() {
         {loading ? (
           <div className="py-24 text-center flex flex-col items-center gap-4">
             <Loader2 className="w-10 h-10 text-[#FF008A] animate-spin" />
-            <p className="text-[#FF008A] font-bold uppercase tracking-widest text-xs">Sincronizando menú neón...</p>
+            <p className="text-[#FF008A] font-bold uppercase tracking-widest text-xs">Cargando el mejor menú de la costa...</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
@@ -147,7 +147,7 @@ export default function Home() {
 
       <footer className="mt-20 mb-24 text-center">
         <div className="w-10 h-[1px] bg-[#FF008A]/30 mx-auto mb-6"></div>
-        <p className="font-headline uppercase tracking-[0.4em] text-[9px] text-[#B0B0B0] opacity-40">Mr. Smith Electric Neon v2.5</p>
+        <p className="font-headline uppercase tracking-[0.4em] text-[9px] text-[#B0B0B0] opacity-40">Mr. Smith - El Mejor Bar Pool de la Costa</p>
         <Link href="/admin" className="text-[10px] text-[#B0B0B0] opacity-10 hover:opacity-100 transition-opacity mt-4 inline-block hover:text-[#00F0FF]">
           ACCESO PERSONAL AUTORIZADO
         </Link>

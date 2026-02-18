@@ -1,11 +1,12 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 export const metadata: Metadata = {
-  title: 'Mr. Smith Bar Pool - Noche de Neón Eléctrico',
-  description: 'Menú futurista para la mejor experiencia de billar en Mr. Smith.',
+  title: 'Mr. Smith - El Mejor Bar Pool de la Costa',
+  description: 'Menú digital para el mejor bar pool de la costa. Experiencia de billar y tragos eléctricos.',
 };
 
 export default function RootLayout({
