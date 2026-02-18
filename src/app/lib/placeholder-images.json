@@ -1,0 +1,41 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "cocktail-1",
+      "description": "Electric Blue Cocktail",
+      "imageUrl": "https://picsum.photos/seed/cocktail1/400/500",
+      "imageHint": "cocktail neon"
+    },
+    {
+      "id": "cocktail-2",
+      "description": "Magenta Sunset Drink",
+      "imageUrl": "https://picsum.photos/seed/cocktail2/400/500",
+      "imageHint": "magenta drink"
+    },
+    {
+      "id": "beer-1",
+      "description": "Craft Beer",
+      "imageUrl": "https://picsum.photos/seed/beer1/400/500",
+      "imageHint": "cold beer"
+    },
+    {
+      "id": "food-1",
+      "description": "Gourmet Burger",
+      "imageUrl": "https://picsum.photos/seed/burger1/400/500",
+      "imageHint": "burger neon"
+    },
+    {
+      "id": "food-2",
+      "description": "Loaded Nachos",
+      "imageUrl": "https://picsum.photos/seed/nachos1/400/500",
+      "imageHint": "nachos food"
+    },
+    {
+      "id": "billiards-1",
+      "description": "Pool Table Tokens",
+      "imageUrl": "https://picsum.photos/seed/pool1/400/500",
+      "imageHint": "billiards table"
+    }
+  ]
+}
