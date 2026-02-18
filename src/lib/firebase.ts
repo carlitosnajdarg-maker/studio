@@ -21,9 +21,13 @@ let db: any = null;
 const googleProvider = new GoogleAuthProvider();
 
 if (isConfigValid) {
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  auth = getAuth(app);
-  db = getFirestore(app);
+  try {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (error) {
+    console.error("Error al inicializar Firebase:", error);
+  }
 } else {
   console.warn("Firebase: Las variables de entorno no están configuradas correctamente.");
 }
