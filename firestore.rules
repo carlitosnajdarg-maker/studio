@@ -1,136 +1,48 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * BARPOOL APPLICATION SECURITY RULES
-     *
-     * Core Philosophy:
-     * This ruleset implements a robust, administrator-led security model for a hospitality environment. 
-     * Static menu data (Categories, Menu Items) and Staff Profiles are publicly readable to facilitate 
-     * guest browsing, while write operations are strictly reserved for administrative identities.
-     *
-     * Data Structure:
-     * The database uses a flat, top-level collection structure to ensure high performance and 
-     * "Authorization Independence." This avoids deep nesting and complex recursive rules.
-     *
-     * Key Security Decisions:
-     * 1. Admin Authorization: Controlled via a dedicated `/roles_admin` collection. Existence of a 
-     *    UID in this collection grants global write access.
-     * 2. Feedback & Financials: Ratings are public to build trust, while Tips are private, 
-     *    viewable only by the recipient staff member or administrators.
-     * 3. Identity Verification: All user-generated content (ratings/tips) requires the creator 
-     *    to denormalize their own UID into the document for verification.
-     *
-     * Denormalization for Authorization:
-     * To avoid expensive `get()` calls, documents like 'ratings' and 'tips' include the `userId` 
-     * of the creator and the `staffId` of the target directly on the record.
-     */
-
-    // --- Global Helper Functions ---
-
-    /** @description Checks if the request is from an authenticated user. */
+    // Funciones de ayuda
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** @description Checks if the authenticated user has an entry in the admin roles collection. */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && (
+        request.auth.token.email == "arrozitocarlos1@gmail.com" || 
+        request.auth.token.email == "carlitosnajdarg@gmail.com"
+      );
     }
 
-    /** @description Validates if the provided UID matches the authenticated user. */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    // Reglas para la colección de menú
+    match /menu/{itemId} {
+      // Cualquier persona puede ver el menú
+      allow read: if true;
+      // Solo los admins pueden crear, editar o borrar productos
+      allow write: if isAdmin();
     }
 
-    /** @description Verifies ownership of an existing document before update or delete. */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    // --- Collection Rules ---
-
-    /**
-     * @description Publicly accessible categories for the menu.
-     * @path /categories/{categoryId}
-     * @allow get, list: (any user)
-     * @deny create, update, delete: (non-admin users)
-     * @principle Public read with Admin-only write control.
-     */
+    // Reglas para categorías y otros (por si se usan en el futuro)
     match /categories/{categoryId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
-    /**
-     * @description Publicly accessible menu items linked to categories.
-     * @path /menu_items/{menuItemId}
-     * @allow get, list: (any user)
-     * @deny create, update, delete: (non-admin users)
-     * @principle Public read with Admin-only write control.
-     */
-    match /menu_items/{menuItemId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    /**
-     * @description Public profiles for staff members to allow for ratings and tips.
-     * @path /staff_members/{staffId}
-     * @allow get, list: (any user)
-     * @deny create, update, delete: (non-admin users)
-     * @principle Public read with Admin-only write control.
-     */
     match /staff_members/{staffId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
-    /**
-     * @description Customer ratings for staff. Authenticated users can create ratings.
-     * @path /ratings/{ratingId}
-     * @allow create: (authenticated user setting their own userId)
-     * @allow delete: (the original author or an administrator)
-     * @deny update: (preventing rating manipulation; delete and recreate is preferred)
-     * @principle User-authenticated creation with ownership-based deletion.
-     */
-    match /ratings/{ratingId} {
-      allow get, list: if true;
-      // CRITICAL: Ensure the creator identifies themselves in the document.
-      // Note: 'userId' field must be sent by client as it's not in the base Entity schema but required by reasoning.
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin();
-      allow delete: if isAdmin() || isExistingOwner(resource.data.userId);
-    }
-
-    /**
-     * @description Private financial tips. Viewable only by the recipient or admins.
-     * @path /tips/{tipId}
-     * @allow get, list: (the staff member identified by staffId or an admin)
-     * @allow create: (authenticated user providing the tip)
-     * @deny update, delete: (financial records are immutable for users)
-     * @principle PII/Financial data isolation using staffId lookup.
-     */
+    // Reglas para propinas y calificaciones
     match /tips/{tipId} {
-      // Readable only by the staff member receiving the tip or an admin
-      allow get, list: if isAdmin() || (isSignedIn() && resource.data.staffId == request.auth.uid);
-      // Anyone signed in can leave a tip, but must correctly identify themselves
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin();
+      allow create: if isSignedIn();
+      allow read: if isAdmin();
     }
 
-    /**
-     * @description Administrative roles mapping.
-     * @path /roles_admin/{userId}
-     * @allow get: (the user themselves or an existing admin)
-     * @deny write: (restricted to existing admins to prevent privilege escalation)
-     * @principle Database Access Control (DBAC) via existence checks.
-     */
-    match /roles_admin/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
-      allow create, update, delete: if isAdmin();
+    match /ratings/{ratingId} {
+      allow read, create: if true;
+      allow write: if isAdmin();
     }
   }
 }
