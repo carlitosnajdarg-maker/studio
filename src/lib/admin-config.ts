@@ -7,7 +7,7 @@
  */
 
 export const ADMIN_WHITELIST = [
-  "tu-correo-aqui@gmail.com", // <-- CAMBIA ESTO POR TU GMAIL
+  "arrozitocarlos1@gmail.com", // Acceso principal solicitado
   "admin@mrsmithbarpool.com"
 ];
 
