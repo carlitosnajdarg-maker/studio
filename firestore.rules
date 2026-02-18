@@ -1,0 +1,12 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /menu/{item} {
+      // Cualquiera puede ver el menú
+      allow read: if true;
+      // Solo el administrador autorizado puede modificarlo
+      allow write: if request.auth != null && request.auth.token.email == "arrozitocarlos1@gmail.com";
+    }
+  }
+}
