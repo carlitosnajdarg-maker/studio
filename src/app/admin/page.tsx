@@ -363,14 +363,14 @@ export default function AdminPage() {
               <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
               <div>
                 <p className="font-bold text-white">Paso 1: Copiar URL del Hosting</p>
-                <p>Busca en Firebase Console > Hosting tu URL (ej: mrsmith.web.app).</p>
+                <p>Busca en Firebase Console &gt; Hosting tu URL (ej: mrsmith.web.app).</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
               <div>
                 <p className="font-bold text-white">Paso 2: Autorizar en Authentication</p>
-                <p>Añade esa URL en Authentication > Settings > Authorized domains para que el staff pueda loguearse.</p>
+                <p>Añade esa URL en Authentication &gt; Settings &gt; Authorized domains para que el staff pueda loguearse.</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -448,8 +448,8 @@ export default function AdminPage() {
               <CardHeader><CardTitle className="text-sm font-headline uppercase text-[#00F0FF]">Administración de Staff</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleSaveStaff} className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre Completo</Label><Input value={staffName} onChange={e => setStaffName(e.target.value)} required className="bg-white/5 border-white/10 h-11" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Correo Google</Label><Input value={staffEmail} onChange={e => setStaffEmail(e.target.value)} required className="bg-white/5 border-white/10 h-11" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre Completo</Label><Input value={staffName} onChange={setStaffName} required className="bg-white/5 border-white/10 h-11" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Correo Google</Label><Input value={staffEmail} onChange={setStaffEmail} required className="bg-white/5 border-white/10 h-11" /></div>
                   <div className="space-y-1"><Label className="text-[10px] uppercase">Puesto / Rango</Label>
                     <select value={staffRole} onChange={e => setStaffRole(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-11 px-3 text-sm text-white">
                       <option value="Bartender">Bartender</option><option value="Mesero">Mesero</option><option value="Gerente">Gerente</option>
