@@ -1,14 +1,19 @@
 # Mr. Smith - El Mejor Bar Pool de la Costa
 
-Bienvenido al repositorio del menú digital y sistema de gestión de staff de **Mr. Smith**.
+Bienvenido al sistema de gestión de **Mr. Smith**. Este proyecto incluye el menú digital para clientes y el panel de control para el staff.
 
 ## Características
-- **Menú Digital**: Categorizado y dinámico para clientes.
-- **Panel Administrativo**: Gestión de productos, precios y fotos.
-- **Reloj de Jornada**: Sistema de fichaje (Inicio/Pausa/Fin) para el staff con cálculo de horas netas.
-- **Jerarquía de Roles**: Control total para el Dueño sobre Gerentes y Staff.
+- **Menú Digital**: Categorizado y optimizado para móviles.
+- **Reloj de Jornada**: Sistema de fichaje profesional (Inicio/Pausa/Fin) que calcula horas netas trabajadas.
+- **Panel Administrativo**: Gestión de productos, precios y fotos reales.
+- **Jerarquía de Roles**: El Dueño puede crear rangos personalizados (DJ, Seguridad, Bartender) y asignar permisos.
 
-## Instrucciones de Publicación
-Este proyecto está configurado para **Static Export**, lo que permite usar el plan gratuito de Firebase Hosting.
-1. Ejecuta `npm run build` para generar la carpeta `out`.
-2. Sube los cambios a GitHub para que Firebase App Hosting (o tu flujo de CI/CD) despliegue el contenido de `src/app/page.tsx`.
+## ¿Cómo publicar los cambios?
+Este proyecto está optimizado para el **Plan Gratuito (Spark)** de Firebase. No necesitas ejecutar comandos:
+
+1. **Sincroniza con GitHub**: Guarda tus cambios y súbelos a tu repositorio.
+2. **Despliegue Automático**: Firebase recibirá tus archivos y actualizará el menú en el dominio `.web.app` automáticamente en unos minutos.
+3. **Link del Menú**: Una vez publicado, copia tu URL pública y pégala en la sección de "Código QR" dentro de la App para que tus clientes puedan entrar.
+
+---
+*Desarrollado para Mr. Smith - El mejor bar pool de la costa.*
