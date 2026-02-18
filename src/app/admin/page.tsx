@@ -41,6 +41,7 @@ export default function AdminPage() {
   const [newRoleLevel, setNewRoleLevel] = useState("Staff")
 
   const [elapsedTime, setElapsedTime] = useState("00:00:00")
+  const [publicUrl, setPublicUrl] = useState("")
 
   // Queries
   const staffQuery = useMemoFirebase(() => query(collection(db, "staff_members"), orderBy("name", "asc")), [db])
@@ -58,6 +59,12 @@ export default function AdminPage() {
   const staffProfile = staffList?.find(s => s.email?.toLowerCase() === user?.email?.toLowerCase())
   const isActualOwner = isOwner(user?.email) || staffProfile?.role === 'Dueño'
   const isActualAdmin = isAdmin(user?.email) || staffProfile?.role === 'Gerente' || isActualOwner
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setPublicUrl(window.location.origin)
+    }
+  }, [])
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -245,6 +252,11 @@ export default function AdminPage() {
     return { avg, time: `${Math.floor(mins/60)}h ${mins%60}m` }
   }
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "¡Copiado!", description: "Link copiado al portapapeles." });
+  }
+
   if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-[#120108] text-[#FF008A] font-bold">CARGANDO...</div>
 
   if (!user || (!isActualAdmin && !staffProfile)) {
@@ -274,7 +286,7 @@ export default function AdminPage() {
                 <p>Si ves una pantalla azul de Firebase al entrar a tu link:</p>
                 <ol className="list-decimal pl-4 space-y-2">
                   <li>Es porque estás usando el Hosting gratuito ( Spark ).</li>
-                  <li>Para solucionarlo, usa el link de <b>Workstation</b> que termina en <span className="text-[#00F0FF]">.google.com</span>.</li>
+                  <li>Para solucionarlo, usa el link de <b>Workstation</b> que ves arriba en tu navegador.</li>
                   <li>Copia ese link, pégalo en el botón de QR de la página principal y dale ese QR a tus clientes.</li>
                   <li>¡Asegúrate de tener la Workstation encendida!</li>
                 </ol>
@@ -302,6 +314,29 @@ export default function AdminPage() {
         </div>
         <Button onClick={() => signOut(auth)} size="sm" variant="ghost" className="rounded-full text-white/60"><LogOut className="w-4 h-4 mr-2" /> Salir</Button>
       </header>
+
+      {/* DASHBOARD DE ENLACE PUBLICO */}
+      {isActualAdmin && (
+        <Card className="bg-[#1a020c] border-[#FF008A]/30 mb-8 overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#FF008A]/10 to-transparent pointer-events-none opacity-50" />
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row items-center gap-6 justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-[#FF008A]/20 p-3 rounded-2xl">
+                  <Globe className="w-6 h-6 text-[#FF008A]" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-[#FF008A] tracking-[0.2em] mb-1">Tu Link Público (Workstation)</p>
+                  <p className="text-xs font-mono text-white/80 max-w-[200px] md:max-w-none truncate">{publicUrl}</p>
+                </div>
+              </div>
+              <Button onClick={() => copyToClipboard(publicUrl)} className="bg-[#FF008A] hover:bg-[#FF008A]/80 font-bold uppercase w-full md:w-auto">
+                <Copy className="w-4 h-4 mr-2" /> Copiar Link para QR
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* RELOJ DE JORNADA */}
       {staffProfile && (
@@ -463,9 +498,9 @@ export default function AdminPage() {
               <CardHeader><CardTitle className="text-sm font-headline uppercase text-purple-600">Niveles Personalizados</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleCreateRole} className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre del Puesto</Label><Input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} placeholder="Ej: DJ, Seguridad" required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre del Puesto</Label><Input value={newRoleName} onChange={newRoleName => setNewRoleName(newRoleName.target.value)} placeholder="Ej: DJ, Seguridad" required className="bg-white/5 border-white/10" /></div>
                   <div className="space-y-1"><Label className="text-[10px] uppercase">Nivel de Acceso</Label>
-                    <select value={newRoleLevel} onChange={e => setNewRoleLevel(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
+                    <select value={newRoleLevel} onChange={newRoleLevel => setNewRoleLevel(newRoleLevel.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
                       <option value="Staff">Solo Reloj</option><option value="Gerente">Editar Menú</option><option value="Dueño">Dueño Total</option>
                     </select>
                   </div>
