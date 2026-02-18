@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -49,15 +50,31 @@ export default function AdminPage() {
   }, [user])
 
   const handleLogin = async () => {
-    if (!auth) return
+    if (!auth) {
+      toast({
+        title: "Error",
+        description: "Servicio de autenticación no disponible.",
+        variant: "destructive"
+      })
+      return
+    }
     try {
       await signInWithPopup(auth, googleProvider)
     } catch (error: any) {
-      toast({
-        title: "Error de conexión",
-        description: error.message || "Revisa la configuración de Firebase Authentication.",
-        variant: "destructive"
-      })
+      console.error("Login error:", error)
+      if (error.code === 'auth/popup-blocked') {
+        toast({
+          title: "Ventana bloqueada",
+          description: "Tu navegador bloqueó el inicio de sesión. Haz clic en el icono de la barra de direcciones para permitir ventanas emergentes y vuelve a intentarlo.",
+          variant: "destructive"
+        })
+      } else {
+        toast({
+          title: "Error de conexión",
+          description: error.message || "No se pudo conectar con Google.",
+          variant: "destructive"
+        })
+      }
     }
   }
 
@@ -95,7 +112,7 @@ export default function AdminPage() {
       for (const item of initialItems) {
         await addDoc(collection(db, "menu"), { ...item, createdAt: new Date().toISOString() });
       }
-      toast({ title: "Datos cargados", description: "Se han añadido Maní, Panchos y Fernet." });
+      toast({ title: "Datos cargados", description: "Se han añadido los productos clásicos de Mr. Smith." });
     } catch (error) {
       toast({ title: "Error", description: "No se pudo cargar la semilla.", variant: "destructive" });
     }
@@ -116,15 +133,15 @@ export default function AdminPage() {
   if (!isConfigValid) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#120108] p-5">
-        <Card className="bg-[#1a020c] border-destructive/50 text-white max-w-md text-center">
+        <Card className="bg-[#1a020c] border-destructive/50 text-white max-w-md text-center shadow-[0_0_30px_rgba(255,0,0,0.1)]">
           <CardHeader>
             <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-2" />
             <CardTitle className="text-xl font-headline uppercase">Firebase no configurado</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-[#B0B0B0]">Faltan las credenciales en el panel de Studio.</p>
-            <Link href="/" className="text-[#00F0FF] hover:underline flex items-center justify-center gap-2">
-              <ArrowLeft className="w-4 h-4" /> Volver al menú
+            <p className="text-[#B0B0B0] text-sm">Faltan las credenciales en el panel de Studio. Por favor, pega tu configuración de Firebase para activar la base de datos.</p>
+            <Link href="/" className="text-[#00F0FF] hover:underline flex items-center justify-center gap-2 text-xs uppercase font-bold">
+              <ArrowLeft className="w-4 h-4" /> Volver al menú público
             </Link>
           </CardContent>
         </Card>
@@ -134,7 +151,7 @@ export default function AdminPage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#120108]">
-      <div className="text-[#FF008A] font-bold animate-pulse text-xl font-headline uppercase">Sincronizando...</div>
+      <div className="text-[#FF008A] font-bold animate-pulse text-xl font-headline uppercase tracking-widest">Sincronizando...</div>
     </div>
   )
 
@@ -150,7 +167,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-6 pb-10">
             <p className="text-[#B0B0B0] text-center text-sm px-4">
-              Ingresa con tu Gmail autorizado para gestionar el menú.
+              Ingresa con tu Gmail autorizado para gestionar el menú. Si el navegador bloquea la ventana, por favor permítela.
             </p>
             <Button onClick={handleLogin} className="bg-[#FF008A] hover:bg-[#FF008A]/80 text-white font-bold h-14 text-lg rounded-xl transition-all shadow-lg">
               Entrar con Google
@@ -173,14 +190,14 @@ export default function AdminPage() {
             <CardTitle className="text-2xl text-destructive font-headline uppercase">Acceso Denegado</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 pb-10">
-            <p className="text-[#B0B0B0] text-sm">
-              El correo <span className="text-white font-bold">{user.email}</span> no está en la lista blanca de Mr. Smith.
+            <p className="text-[#B0B0B0] text-sm leading-relaxed">
+              El correo <span className="text-white font-bold">{user.email}</span> no está en la lista blanca de administradores.
             </p>
             <div className="flex flex-col gap-3">
-              <Button onClick={() => signOut(auth)} variant="outline" className="border-white/20 text-white hover:bg-white/5">
+              <Button onClick={() => signOut(auth)} variant="outline" className="border-white/20 text-white hover:bg-white/5 h-12">
                 Cerrar Sesión
               </Button>
-              <Link href="/" className="block text-[#00F0FF] hover:underline text-sm">Volver al inicio</Link>
+              <Link href="/" className="block text-[#00F0FF] hover:underline text-sm font-bold uppercase tracking-widest mt-2">Volver al inicio</Link>
             </div>
           </CardContent>
         </Card>
@@ -203,13 +220,13 @@ export default function AdminPage() {
       <div className="grid gap-8 max-w-4xl mx-auto">
         {/* State check for empty menu */}
         {menuItems.length === 0 && (
-          <Card className="bg-[#00F0FF]/5 border-[#00F0FF]/50 text-white overflow-hidden">
+          <Card className="bg-[#00F0FF]/5 border-[#00F0FF]/50 text-white overflow-hidden animate-pulse">
             <CardHeader className="text-center">
               <Database className="w-12 h-12 text-[#00F0FF] mx-auto mb-4" />
               <CardTitle className="font-headline text-[#00F0FF] uppercase">Menú Vacío</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 text-center pb-8">
-              <p className="text-[#B0B0B0]">Tu base de datos está lista pero no tiene productos. ¿Quieres cargar los clásicos (Maní, Panchos y Fernet) ahora?</p>
+              <p className="text-[#B0B0B0] text-sm">Tu base de datos está lista pero no tiene productos. ¿Quieres cargar los clásicos (Maní, Panchos y Fernet) ahora?</p>
               <Button onClick={seedInitialData} className="bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#120108] font-bold h-14 px-10 rounded-xl transition-all shadow-[0_0_20px_rgba(0,240,255,0.3)]">
                 <Sparkles className="w-5 h-5 mr-2" /> Activar Menú Dinámico
               </Button>
@@ -266,8 +283,8 @@ export default function AdminPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <h2 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Gestión de Productos ({menuItems.length})</h2>
-              <Button onClick={seedInitialData} variant="ghost" size="sm" className="text-[#B0B0B0] hover:text-[#00F0FF]">
-                <Plus className="w-4 h-4 mr-1" /> Resetear Menú
+              <Button onClick={seedInitialData} variant="ghost" size="sm" className="text-[#B0B0B0] hover:text-[#00F0FF] text-[10px] font-bold uppercase">
+                <Sparkles className="w-3 h-3 mr-1" /> Resetear Menú
               </Button>
             </div>
             <div className="grid gap-3">
@@ -296,9 +313,9 @@ export default function AdminPage() {
         )}
       </div>
       
-      <div className="fixed bottom-0 left-0 right-0 p-4 flex justify-center bg-[#120108]/80 backdrop-blur-xl border-t border-white/5">
+      <div className="fixed bottom-0 left-0 right-0 p-4 flex justify-center bg-[#120108]/80 backdrop-blur-xl border-t border-white/5 z-50">
          <Link href="/">
-          <Button variant="ghost" className="text-[#00F0FF] hover:bg-white/5 font-bold">
+          <Button variant="ghost" className="text-[#00F0FF] hover:bg-white/5 font-bold uppercase text-xs tracking-widest">
              <ArrowLeft className="mr-2 w-4 h-4" /> Ver Vista del Cliente
           </Button>
          </Link>
