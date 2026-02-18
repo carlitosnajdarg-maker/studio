@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, Sparkles, Database } from "lucide-react"
+import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, Sparkles, Database, Copy, ExternalLink } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminPage() {
@@ -19,6 +19,7 @@ export default function AdminPage() {
   const db = useFirestore()
   const { user, isUserLoading } = useUser()
   const [menuItems, setMenuItems] = useState<any[]>([])
+  const [hostname, setHostname] = useState("")
   const { toast } = useToast()
 
   // Form states
@@ -26,6 +27,12 @@ export default function AdminPage() {
   const [category, setCategory] = useState("Tragos")
   const [price, setPrice] = useState("")
   const [description, setDescription] = useState("")
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setHostname(window.location.hostname)
+    }
+  }, [])
 
   useEffect(() => {
     if (user && isAdmin(user.email) && db) {
@@ -38,6 +45,11 @@ export default function AdminPage() {
     }
   }, [user, db])
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast({ title: "Copiado", description: "Dominio copiado al portapapeles." })
+  }
+
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider()
     try {
@@ -48,11 +60,11 @@ export default function AdminPage() {
       let errorMessage = "No se pudo iniciar sesión con Google."
       
       if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = "Error: Dominio no autorizado. En tu Consola de Firebase, ve a Authentication > Settings > Authorized Domains y añade el dominio actual sin 'https://'. Ejemplo: 9002-port-xxxx.idbe.workstations.google.com"
+        errorMessage = `Dominio no autorizado: ${window.location.hostname}. Debes añadirlo en la Consola de Firebase.`
       } else if (error.code === 'auth/popup-closed-by-user') {
         errorMessage = "Cerraste la ventana antes de terminar. Intenta de nuevo."
       } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = "El navegador bloqueó la ventana. Por favor, permite ventanas emergentes para este sitio."
+        errorMessage = "El navegador bloqueó la ventana emergente. Por favor, permítelas."
       }
 
       toast({
@@ -132,12 +144,25 @@ export default function AdminPage() {
             <p className="text-[#B0B0B0] text-sm mt-2">Mr. Smith Bar Pool</p>
           </CardHeader>
           <CardContent className="flex flex-col gap-6 pb-10">
-            <p className="text-[#B0B0B0] text-center text-sm px-4">
-              Ingresa con tu Gmail autorizado para gestionar el menú.
-            </p>
+            <div className="bg-[#FF008A]/5 border border-[#FF008A]/20 p-4 rounded-xl space-y-3">
+              <p className="text-xs text-[#B0B0B0] text-center uppercase tracking-widest font-bold">Paso 1: Autorizar Dominio</p>
+              <div className="flex items-center justify-between bg-black/40 p-2 rounded-lg border border-white/5">
+                <code className="text-[10px] text-[#00F0FF] truncate mr-2">{hostname}</code>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-[#00F0FF]" onClick={() => copyToClipboard(hostname)}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+              <Link href="https://console.firebase.google.com/" target="_blank">
+                <Button variant="outline" className="w-full text-[10px] h-8 border-[#00F0FF]/30 text-[#00F0FF] hover:bg-[#00F0FF]/10">
+                  <ExternalLink className="w-3 h-3 mr-2" /> Ir a Consola Firebase
+                </Button>
+              </Link>
+            </div>
+
             <Button onClick={handleLogin} className="bg-[#FF008A] hover:bg-[#FF008A]/80 text-white font-bold h-14 text-lg rounded-xl transition-all shadow-lg">
               Entrar con Google
             </Button>
+            
             <Link href="/" className="text-center text-xs text-[#00F0FF] hover:underline flex items-center justify-center gap-2 mt-2 opacity-70">
               <ArrowLeft className="w-4 h-4" /> Volver al menú público
             </Link>
