@@ -1,10 +1,14 @@
 
-// Lista de correos electrónicos autorizados para acceder al panel administrativo
-// ¡RECUERDA AGREGAR TU GMAIL AQUÍ PARA PODER ENTRAR!
+/**
+ * @fileOverview Configuración de seguridad para el panel administrativo.
+ * 
+ * IMPORTANTE: Agrega aquí los correos de Gmail que quieres que tengan
+ * acceso total para añadir o borrar productos del menú.
+ */
+
 export const ADMIN_WHITELIST = [
-  "tu-email@gmail.com", 
-  "admin@mrsmithbarpool.com",
-  "jose@gmail.com" // Ejemplo de otro correo autorizado
+  "tu-correo-aqui@gmail.com", // <-- CAMBIA ESTO POR TU GMAIL
+  "admin@mrsmithbarpool.com"
 ];
 
 export function isAdmin(email: string | null | undefined): boolean {
