@@ -48,9 +48,11 @@ export default function AdminPage() {
       let errorMessage = "No se pudo iniciar sesión con Google."
       
       if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = "Este dominio no está autorizado. Copia la URL de tu navegador (sin https://) y pégala en Authentication > Settings > Authorized Domains en tu consola de Firebase."
+        errorMessage = "Error: Dominio no autorizado. En tu Consola de Firebase, ve a Authentication > Settings > Authorized Domains y añade el dominio actual sin 'https://'. Ejemplo: 9002-port-xxxx.idbe.workstations.google.com"
       } else if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = "La ventana de inicio de sesión se cerró. Inténtalo de nuevo."
+        errorMessage = "Cerraste la ventana antes de terminar. Intenta de nuevo."
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = "El navegador bloqueó la ventana. Por favor, permite ventanas emergentes para este sitio."
       }
 
       toast({
