@@ -33,7 +33,6 @@ export default function Home() {
   const [menuItems, setMenuItems] = useState<MenuItemProps[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Obtener URL pública de Firestore
   const settingsRef = useMemoFirebase(() => doc(db, "settings", "general"), [db])
   const { data: settings } = useDoc(settingsRef)
   const [inputUrl, setInputUrl] = useState("")
@@ -127,9 +126,6 @@ export default function Home() {
                         />
                         <Button onClick={handleSaveUrl} size="sm" className="h-9 bg-[#00F0FF] text-black font-bold">OK</Button>
                       </div>
-                      <p className="text-[9px] text-white/40 mt-2 leading-tight">
-                        Define a dónde irán los clientes al escanear el QR.
-                      </p>
                     </div>
                   </div>
                 ) : (
