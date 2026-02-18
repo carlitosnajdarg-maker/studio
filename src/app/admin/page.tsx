@@ -73,6 +73,8 @@ export default function AdminPage() {
         const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
         setElapsedTime(`${h}:${m}:${s}`);
       }, 1000);
+    } else if (staffProfile?.activeSession?.status === "paused") {
+      setElapsedTime("PAUSADO");
     } else {
       setElapsedTime("00:00:00");
     }
@@ -228,10 +230,12 @@ export default function AdminPage() {
 
     await addDoc(collection(db, "work_logs"), {
       staffId: staffProfile.id,
+      staffName: staffProfile.name,
       startTime: staffProfile.activeSession.startTime,
       endTime: end.toISOString(),
       durationMinutes: effectiveMins,
-      pausedMinutes: pausedMins
+      pausedMinutes: pausedMins,
+      createdAt: serverTimestamp()
     })
     await updateDoc(doc(db, "staff_members", staffProfile.id), { activeSession: null })
     toast({ title: "Turno guardado" })
@@ -288,6 +292,54 @@ export default function AdminPage() {
         <Button onClick={() => signOut(auth)} size="sm" variant="ghost" className="rounded-full text-white/60"><LogOut className="w-4 h-4 mr-2" /> Salir</Button>
       </header>
 
+      {/* RELOJ DE JORNADA - DESTACADO */}
+      {staffProfile && (
+        <Card className="bg-[#1a020c] border-[#00F0FF]/40 mb-8 neon-glow-cyan overflow-hidden">
+          <div className="bg-[#00F0FF]/10 px-6 py-2 border-b border-[#00F0FF]/20 flex justify-between items-center">
+            <CardTitle className="text-[10px] font-headline uppercase text-[#00F0FF] flex items-center gap-2 tracking-widest">
+              <Timer className="w-4 h-4" /> Reloj de Control de Jornada
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full animate-pulse ${staffProfile.activeSession ? (staffProfile.activeSession.status === 'paused' ? 'bg-yellow-500' : 'bg-green-500') : 'bg-red-500'}`} />
+              <span className="text-[9px] font-bold text-white/50 uppercase tracking-tighter">
+                {staffProfile.activeSession ? (staffProfile.activeSession.status === 'paused' ? 'Turno en Pausa' : 'Turno Activo') : 'Fuera de Turno'}
+              </span>
+            </div>
+          </div>
+          <CardContent className="pt-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="text-center md:text-left flex-1">
+                <p className="text-[10px] uppercase text-[#B0B0B0] font-bold mb-1 tracking-widest">Tiempo de Trabajo Neto</p>
+                <p className={`text-6xl font-headline font-bold tracking-widest ${staffProfile.activeSession?.status === 'paused' ? 'text-yellow-500' : 'text-white'}`}>
+                  {elapsedTime}
+                </p>
+                {staffProfile.activeSession?.status === "paused" && (
+                  <p className="text-xs text-yellow-500 font-bold uppercase mt-2 bg-yellow-500/10 inline-block px-3 py-1 rounded-full border border-yellow-500/20">⏸ Descanso Iniciado</p>
+                )}
+              </div>
+              
+              <div className="flex flex-wrap gap-4 w-full md:w-auto">
+                {!staffProfile.activeSession ? (
+                  <Button onClick={handleStartWork} className="flex-1 md:flex-none bg-green-600 hover:bg-green-700 h-20 px-10 font-bold text-xl uppercase rounded-2xl shadow-xl shadow-green-900/20">
+                    <Play className="w-7 h-7 mr-3" /> Iniciar Jornada
+                  </Button>
+                ) : (
+                  <>
+                    <Button onClick={handlePauseWork} variant="outline" className="flex-1 md:flex-none border-yellow-500 text-yellow-500 h-20 px-8 font-bold uppercase rounded-2xl text-lg">
+                      {staffProfile.activeSession.status === 'paused' ? <Play className="w-6 h-6 mr-3" /> : <Pause className="w-6 h-6 mr-3" />}
+                      {staffProfile.activeSession.status === 'paused' ? 'Reanudar' : 'Tomar Descanso'}
+                    </Button>
+                    <Button onClick={handleFinishWork} variant="destructive" className="flex-1 md:flex-none h-20 px-8 font-bold uppercase rounded-2xl text-lg shadow-xl shadow-red-900/20">
+                      <Square className="w-6 h-6 mr-3" /> Terminar Turno
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* GUIA DE LANZAMIENTO */}
       {isActualAdmin && (
         <Card className="bg-blue-600/10 border-blue-500/30 mb-8 overflow-hidden">
@@ -298,66 +350,27 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-[11px] text-white/70">
             <div className="flex items-start gap-2">
-              <div className="bg-blue-500/20 p-1 rounded">1</div>
-              <p>Busca tu URL pública en la consola de Firebase (ej: <b>mrsmith.web.app</b>).</p>
+              <div className="bg-blue-500/20 p-1 rounded font-bold">1</div>
+              <p>Busca tu URL pública en la pestaña <b>Hosting</b> de Firebase Console (ej: <b>mrsmith.web.app</b>).</p>
             </div>
             <div className="flex items-start gap-2">
-              <div className="bg-blue-500/20 p-1 rounded">2</div>
-              <p>Ve a <b>Authentication {'>'} Settings {'>'} Authorized domains</b> y añade esa URL.</p>
+              <div className="bg-blue-500/20 p-1 rounded font-bold">2</div>
+              <p>Ve a <b>Authentication {' > '} Settings {' > '} Authorized domains</b> y añade esa URL.</p>
             </div>
             <div className="flex items-start gap-2">
-              <div className="bg-blue-500/20 p-1 rounded">3</div>
-              <p>Si ves la página azul de "Bienvenido", espera 2 min y refresca. ¡Tu menú está cargando!</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* RELOJ DE JORNADA */}
-      {staffProfile && (
-        <Card className="bg-[#1a020c] border-[#00F0FF]/30 mb-8 neon-glow-cyan">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-headline uppercase text-[#00F0FF] flex items-center gap-2">
-              <Timer className="w-4 h-4" /> Reloj de Jornada
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="text-center sm:text-left">
-                <p className="text-[10px] uppercase text-[#B0B0B0] font-bold mb-1">Tiempo Transcurrido</p>
-                <p className="text-4xl font-headline font-bold tracking-widest text-white">{elapsedTime}</p>
-                {staffProfile.activeSession?.status === "paused" && (
-                  <p className="text-[10px] text-yellow-500 font-bold uppercase animate-pulse mt-1">⏸ Pausado</p>
-                )}
-              </div>
-              
-              <div className="flex gap-3 w-full sm:w-auto">
-                {!staffProfile.activeSession ? (
-                  <Button onClick={handleStartWork} className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 h-16 px-8 font-bold text-lg uppercase">
-                    <Play className="w-6 h-6 mr-2" /> Iniciar
-                  </Button>
-                ) : (
-                  <>
-                    <Button onClick={handlePauseWork} variant="outline" className="flex-1 sm:flex-none border-yellow-500 text-yellow-500 h-16 px-6 font-bold uppercase">
-                      {staffProfile.activeSession.status === 'paused' ? <Play className="w-5 h-5 mr-2" /> : <Pause className="w-5 h-5 mr-2" />}
-                      {staffProfile.activeSession.status === 'paused' ? 'Reanudar' : 'Pausar'}
-                    </Button>
-                    <Button onClick={handleFinishWork} variant="destructive" className="flex-1 sm:flex-none h-16 px-6 font-bold uppercase">
-                      <Square className="w-5 h-5 mr-2" /> Terminar
-                    </Button>
-                  </>
-                )}
-              </div>
+              <div className="bg-blue-500/20 p-1 rounded font-bold">3</div>
+              <p>Si ves la página azul de "Welcome", espera 5 min. ¡Tu menú está reemplazando esa página!</p>
             </div>
           </CardContent>
         </Card>
       )}
 
       <Tabs defaultValue="menu">
-        <TabsList className="grid grid-cols-3 h-auto w-full bg-[#1a020c] mb-6 p-1 border border-white/5">
-          <TabsTrigger value="menu" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-[#FF008A]">Menú</TabsTrigger>
-          <TabsTrigger value="staff" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-[#00F0FF] data-[state=active]:text-[#120108]">Personal</TabsTrigger>
-          {isActualOwner && <TabsTrigger value="roles" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-purple-600">Roles</TabsTrigger>}
+        <TabsList className="grid grid-cols-4 h-auto w-full bg-[#1a020c] mb-6 p-1 border border-white/5">
+          <TabsTrigger value="menu" className="uppercase font-bold text-[9px] py-2.5 data-[state=active]:bg-[#FF008A]">Menú</TabsTrigger>
+          <TabsTrigger value="staff" className="uppercase font-bold text-[9px] py-2.5 data-[state=active]:bg-[#00F0FF] data-[state=active]:text-[#120108]">Personal</TabsTrigger>
+          <TabsTrigger value="history" className="uppercase font-bold text-[9px] py-2.5 data-[state=active]:bg-green-600">Historial</TabsTrigger>
+          {isActualOwner && <TabsTrigger value="roles" className="uppercase font-bold text-[9px] py-2.5 data-[state=active]:bg-purple-600">Roles</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="menu" className="space-y-6">
@@ -465,6 +478,28 @@ export default function AdminPage() {
               )
             })}
           </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-6">
+          <Card className="bg-[#1a020c] border-green-600/30">
+            <CardHeader><CardTitle className="text-sm font-headline uppercase text-green-600">Historial de Turnos</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {allLogs?.map(log => (
+                  <div key={log.id} className="flex justify-between items-center p-3 bg-white/5 rounded-lg border border-white/5 text-[11px]">
+                    <div>
+                      <p className="font-bold text-white">{log.staffName || 'Staff'}</p>
+                      <p className="text-white/40">{new Date(log.startTime).toLocaleString('es-AR')}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-green-500">{Math.floor(log.durationMinutes/60)}h {log.durationMinutes%60}m</p>
+                      <p className="text-[9px] text-yellow-500/60 uppercase">Pausa: {log.pausedMinutes || 0}m</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {isActualOwner && (
