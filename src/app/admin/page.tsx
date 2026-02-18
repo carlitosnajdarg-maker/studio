@@ -1,10 +1,9 @@
-
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
 import { useAuth, useFirestore, useUser, useMemoFirebase, useCollection } from "@/firebase"
 import { signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth"
-import { isAdmin, isAuthorized, getRole, ADMIN_WHITELIST } from "@/lib/admin-config"
+import { isAdmin, isOwner, isAuthorized, getRole, OWNER_WHITELIST, ADMIN_WHITELIST } from "@/lib/admin-config"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp, where, getDocs } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, Clock, Star, Users, Beer, Utensils, Coins, Image as ImageIcon, UserCircle } from "lucide-react"
+import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, Clock, Star, Users, Beer, Utensils, Coins, Image as ImageIcon, UserCircle, Edit2, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -24,6 +23,7 @@ export default function AdminPage() {
   
   const [menuItems, setMenuItems] = useState<any[]>([])
   const [hostname, setHostname] = useState("")
+  const [editingId, setEditingId] = useState<string | null>(null)
   
   // Menu Form states
   const [title, setTitle] = useState("")
@@ -32,13 +32,14 @@ export default function AdminPage() {
   const [description, setDescription] = useState("")
   const [imageUrl, setImageUrl] = useState("")
 
-  // Staff Form states (Admin only)
+  // Staff Form states (Admin/Owner only)
   const [staffName, setStaffName] = useState("")
   const [staffEmail, setStaffEmail] = useState("")
   const [staffRole, setStaffRole] = useState("Bartender")
 
   const userRole = user ? getRole(user.email) : 'none'
   const isActualAdmin = isAdmin(user?.email)
+  const isActualOwner = isOwner(user?.email)
 
   // Queries
   const staffQuery = useMemoFirebase(() => query(collection(db, "staff_members")), [db])
@@ -73,20 +74,47 @@ export default function AdminPage() {
     }
   }
 
-  const handleAddItem = async (e: React.FormEvent) => {
+  const handleEditItem = (item: any) => {
+    setEditingId(item.id)
+    setTitle(item.title)
+    setCategory(item.category)
+    setPrice(item.price.toString())
+    setDescription(item.description)
+    setImageUrl(item.imageUrl)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!db) return
     const defaultImg = category === "Comidas" ? "https://picsum.photos/seed/food/400/500" : "https://picsum.photos/seed/drink/400/500"
+    
     try {
-      await addDoc(collection(db, "menu"), {
+      const itemData = {
         title, category, price: Number(price), description, imageUrl: imageUrl || defaultImg,
-        createdAt: new Date().toISOString(), createdBy: user?.email
-      })
-      setTitle(""); setPrice(""); setDescription(""); setImageUrl("")
-      toast({ title: "Producto añadido", description: `${title} ya está en el menú.` })
+        updatedAt: serverTimestamp(), updatedBy: user?.email
+      }
+
+      if (editingId) {
+        await updateDoc(doc(db, "menu", editingId), itemData)
+        toast({ title: "Producto actualizado", description: `${title} ha sido modificado.` })
+      } else {
+        await addDoc(collection(db, "menu"), {
+          ...itemData,
+          createdAt: new Date().toISOString(), createdBy: user?.email
+        })
+        toast({ title: "Producto añadido", description: `${title} ya está en el menú.` })
+      }
+      
+      resetForm()
     } catch (e) {
-      toast({ title: "Error", description: "No tienes permiso.", variant: "destructive" })
+      toast({ title: "Error", description: "No tienes permiso para realizar esta acción.", variant: "destructive" })
     }
+  }
+
+  const resetForm = () => {
+    setEditingId(null)
+    setTitle(""); setPrice(""); setDescription(""); setImageUrl("")
   }
 
   const handleAddStaff = async (e: React.FormEvent) => {
@@ -109,7 +137,6 @@ export default function AdminPage() {
     if (!currentStaff) return
 
     if (currentStaff.activeSession) {
-      // Clock Out
       const start = new Date(currentStaff.activeSession.startTime)
       const end = new Date()
       const diffMs = end.getTime() - start.getTime()
@@ -122,7 +149,6 @@ export default function AdminPage() {
       await updateDoc(doc(db, "staff_members", currentStaff.id), { activeSession: null })
       toast({ title: "Salida registrada", description: `Turno de ${Math.floor(diffMins / 60)}h ${diffMins % 60}m finalizado.` })
     } else {
-      // Clock In
       await updateDoc(doc(db, "staff_members", currentStaff.id), {
         activeSession: { startTime: new Date().toISOString() }
       })
@@ -173,9 +199,13 @@ export default function AdminPage() {
     <div className="min-h-screen bg-[#120108] text-white p-5 pb-24">
       <header className="flex justify-between items-center mb-8 max-w-5xl mx-auto">
         <div className="flex items-center gap-4">
-          <div className="bg-[#FF008A]/20 p-3 rounded-full border border-[#FF008A]/40"><UserCircle className="w-8 h-8 text-[#FF008A]" /></div>
+          <div className="bg-[#FF008A]/20 p-3 rounded-full border border-[#FF008A]/40">
+            {isActualOwner ? <ShieldCheck className="w-8 h-8 text-[#00F0FF]" /> : <UserCircle className="w-8 h-8 text-[#FF008A]" />}
+          </div>
           <div>
-            <h1 className="text-xl font-headline font-bold text-[#FF008A] uppercase tracking-tight">{isActualAdmin ? 'Gerencia' : 'Staff'}</h1>
+            <h1 className={`text-xl font-headline font-bold uppercase tracking-tight ${isActualOwner ? 'text-[#00F0FF]' : 'text-[#FF008A]'}`}>
+              {isActualOwner ? 'Dueño' : (isActualAdmin ? 'Gerencia' : 'Staff')}
+            </h1>
             <p className="text-[10px] text-[#B0B0B0] font-bold uppercase tracking-widest">{user.email}</p>
           </div>
         </div>
@@ -200,10 +230,18 @@ export default function AdminPage() {
         </TabsList>
 
         <TabsContent value="menu" className="space-y-8">
-          <Card className="bg-[#1a020c] border-[#FF008A]/30 text-white shadow-xl overflow-hidden">
-            <CardHeader><CardTitle className="text-[#FF008A] flex items-center gap-2 font-headline text-xl uppercase"><Plus className="w-6 h-6" /> Añadir al Menú</CardTitle></CardHeader>
+          <Card className={`bg-[#1a020c] border-2 shadow-xl overflow-hidden ${editingId ? 'border-[#00F0FF]/50' : 'border-[#FF008A]/30'}`}>
+            <CardHeader>
+              <CardTitle className={`flex items-center justify-between font-headline text-xl uppercase ${editingId ? 'text-[#00F0FF]' : 'text-[#FF008A]'}`}>
+                <span className="flex items-center gap-2">
+                  {editingId ? <Edit2 className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+                  {editingId ? 'Editar Producto' : 'Añadir al Menú'}
+                </span>
+                {editingId && <Button variant="ghost" size="sm" onClick={resetForm} className="text-white/40 hover:text-white">Cancelar</Button>}
+              </CardTitle>
+            </CardHeader>
             <CardContent>
-              <form onSubmit={handleAddItem} className="grid gap-4 md:grid-cols-2">
+              <form onSubmit={handleSaveItem} className="grid gap-4 md:grid-cols-2">
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Nombre del producto" className="bg-white/5 h-12" />
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="bg-[#1a020c] border border-white/10 rounded-md h-12 px-3 text-sm">
                   <option value="Tragos">Tragos</option><option value="Comidas">Comidas</option><option value="Fichas">Fichas</option>
@@ -211,14 +249,16 @@ export default function AdminPage() {
                 <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="Precio ($)" className="bg-white/5 h-12" />
                 <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="URL de Imagen (Opcional)" className="bg-white/5 h-12" />
                 <Input value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Descripción corta" className="md:col-span-2 bg-white/5 h-12" />
-                <Button type="submit" className="md:col-span-2 bg-[#FF008A] hover:bg-[#FF008A]/80 font-bold h-12 uppercase">Publicar</Button>
+                <Button type="submit" className={`md:col-span-2 font-bold h-12 uppercase ${editingId ? 'bg-[#00F0FF] text-[#120108] hover:bg-[#00F0FF]/80' : 'bg-[#FF008A] hover:bg-[#FF008A]/80'}`}>
+                  {editingId ? 'Guardar Cambios' : 'Publicar'}
+                </Button>
               </form>
             </CardContent>
           </Card>
 
           <div className="grid gap-3">
             {menuItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5">
+              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5 hover:border-[#FF008A]/20 transition-all">
                 <div className="flex items-center gap-4">
                   <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-white/10">
                     <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
@@ -228,9 +268,12 @@ export default function AdminPage() {
                     <p className="text-[#00F0FF] font-bold text-xs">${item.price.toLocaleString()}</p>
                   </div>
                 </div>
-                {isActualAdmin && (
-                  <Button onClick={async () => { if(confirm("¿Eliminar?")) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="text-white/20 hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
-                )}
+                <div className="flex gap-1">
+                  <Button onClick={() => handleEditItem(item)} variant="ghost" size="icon" className="text-white/20 hover:text-[#00F0FF]"><Edit2 className="w-4 h-4" /></Button>
+                  {isActualAdmin && (
+                    <Button onClick={async () => { if(confirm("¿Eliminar?")) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="text-white/20 hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -238,8 +281,8 @@ export default function AdminPage() {
 
         <TabsContent value="staff" className="space-y-8">
           {isActualAdmin && (
-            <Card className="bg-[#1a020c] border-[#00F0FF]/30 text-white shadow-xl">
-              <CardHeader><CardTitle className="text-[#00F0FF] flex items-center gap-2 font-headline text-xl uppercase"><Users className="w-6 h-6" /> Nuevo Staff</CardTitle></CardHeader>
+            <Card className={`bg-[#1a020c] border-2 shadow-xl ${isActualOwner ? 'border-[#00F0FF]/30' : 'border-white/10'}`}>
+              <CardHeader><CardTitle className="text-[#00F0FF] flex items-center gap-2 font-headline text-xl uppercase"><Users className="w-6 h-6" /> {isActualOwner ? 'Gestión Staff Dueño' : 'Nuevo Staff'}</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleAddStaff} className="grid gap-4 md:grid-cols-3">
                   <Input value={staffName} onChange={(e) => setStaffName(e.target.value)} required placeholder="Nombre completo" className="bg-white/5 h-12" />
@@ -256,13 +299,17 @@ export default function AdminPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {staffList?.map((staff) => {
               const { avgRating, weeklyHours } = getStaffStats(staff.id)
+              const staffRoleLabel = getRole(staff.email);
+              
               return (
                 <Card key={staff.id} className="bg-[#1a020c] border-white/5 hover:border-[#00F0FF]/20 transition-all">
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <p className="font-bold text-lg">{staff.name}</p>
-                        <p className="text-[10px] font-bold text-[#00F0FF] uppercase tracking-widest">{staff.role}</p>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest ${staffRoleLabel === 'owner' ? 'text-[#00F0FF]' : 'text-[#FF008A]'}`}>
+                          {staffRoleLabel === 'owner' ? 'DUEÑO' : staff.role}
+                        </p>
                         <p className="text-[9px] text-white/40 mt-1">{staff.email}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -282,7 +329,7 @@ export default function AdminPage() {
                         </p>
                       </div>
                     </div>
-                    {isActualAdmin && !ADMIN_WHITELIST.includes(staff.email) && (
+                    {isActualAdmin && !OWNER_WHITELIST.includes(staff.email) && !ADMIN_WHITELIST.includes(staff.email) && (
                       <Button 
                         onClick={async () => { if(confirm("¿Eliminar staff?")) await deleteDoc(doc(db!, "staff_members", staff.id)) }} 
                         variant="ghost" size="sm" className="w-full mt-4 text-destructive hover:bg-destructive/10">Eliminar</Button>
