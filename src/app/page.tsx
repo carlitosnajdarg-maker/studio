@@ -106,7 +106,7 @@ export default function Home() {
                       className="h-9 text-[11px] bg-black/40 border-white/20 text-white font-mono"
                     />
                     <p className="text-[9px] text-yellow-500 mt-2 leading-tight flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" /> Como usas el plan gratuito, pega aquí tu link de <b>Workstation</b> para que el QR funcione.
+                      <AlertCircle className="w-3 h-3" /> Como usas el plan gratuito, pega aquí tu link de <b>Workstation</b> (el que termina en .google.com) para que el QR funcione.
                     </p>
                   </div>
                 </div>

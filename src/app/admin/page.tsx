@@ -284,12 +284,12 @@ export default function AdminPage() {
               </p>
               <div className="space-y-3 text-[10px] text-white/70 leading-relaxed">
                 <p>Si ves una pantalla azul de Firebase al entrar a tu link:</p>
-                <ol className="list-decimal pl-4 space-y-2">
-                  <li>Es porque estás usando el Hosting gratuito ( Spark ).</li>
+                <ul className="list-disc pl-4 space-y-2">
+                  <li>Es porque estás usando el Hosting gratuito (Spark).</li>
                   <li>Para solucionarlo, usa el link de <b>Workstation</b> que ves arriba en tu navegador.</li>
                   <li>Copia ese link, pégalo en el botón de QR de la página principal y dale ese QR a tus clientes.</li>
-                  <li>¡Asegúrate de tener la Workstation encendida!</li>
-                </ol>
+                  <li>¡Asegúrate de tener la Workstation encendida para que la gente vea el menú!</li>
+                </ul>
               </div>
             </div>
           </CardContent>
@@ -498,9 +498,9 @@ export default function AdminPage() {
               <CardHeader><CardTitle className="text-sm font-headline uppercase text-purple-600">Niveles Personalizados</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleCreateRole} className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre del Puesto</Label><Input value={newRoleName} onChange={newRoleName => setNewRoleName(newRoleName.target.value)} placeholder="Ej: DJ, Seguridad" required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre del Puesto</Label><Input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} placeholder="Ej: DJ, Seguridad" required className="bg-white/5 border-white/10" /></div>
                   <div className="space-y-1"><Label className="text-[10px] uppercase">Nivel de Acceso</Label>
-                    <select value={newRoleLevel} onChange={newRoleLevel => setNewRoleLevel(newRoleLevel.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
+                    <select value={newRoleLevel} onChange={e => setNewRoleLevel(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
                       <option value="Staff">Solo Reloj</option><option value="Gerente">Editar Menú</option><option value="Dueño">Dueño Total</option>
                     </select>
                   </div>
