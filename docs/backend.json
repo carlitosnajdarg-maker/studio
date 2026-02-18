@@ -34,23 +34,43 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "email": { "type": "string", "format": "email" },
-        "role": { "type": "string", "enum": ["Bartender", "Mesero", "Seguridad"] },
-        "activeSession": { "type": "object", "description": "Sesión de tiempo activa." }
+        "role": { "type": "string" },
+        "activeSession": { 
+          "type": "object", 
+          "properties": {
+            "startTime": { "type": "string" },
+            "status": { "type": "string", "enum": ["active", "paused"] },
+            "pauseStartTime": { "type": "string" },
+            "totalPausedMinutes": { "type": "number" }
+          }
+        }
       },
       "required": ["id", "name", "email", "role"]
+    },
+    "Role": {
+      "title": "Role",
+      "type": "object",
+      "description": "Rangos personalizados creados por el dueño.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "level": { "type": "string", "enum": ["Dueño", "Gerente", "Staff"] }
+      },
+      "required": ["id", "name", "level"]
     },
     "WorkLog": {
       "title": "WorkLog",
       "type": "object",
-      "description": "Registro de horas trabajadas.",
+      "description": "Registro de horas trabajadas excluyendo pausas.",
       "properties": {
         "id": { "type": "string" },
         "staffId": { "type": "string" },
         "startTime": { "type": "string", "format": "date-time" },
         "endTime": { "type": "string", "format": "date-time" },
-        "durationMinutes": { "type": "number" }
+        "durationMinutes": { "type": "number" },
+        "pausedMinutes": { "type": "number" }
       },
-      "required": ["id", "staffId", "startTime"]
+      "required": ["id", "staffId", "startTime", "endTime"]
     },
     "Rating": {
       "title": "Rating",
@@ -78,6 +98,10 @@
       {
         "path": "/staff_members/{staffId}",
         "definition": { "entityName": "Staff", "description": "Lista de personal autorizado." }
+      },
+      {
+        "path": "/custom_roles/{roleId}",
+        "definition": { "entityName": "Role", "description": "Roles definidos por el dueño." }
       },
       {
         "path": "/work_logs/{logId}",
