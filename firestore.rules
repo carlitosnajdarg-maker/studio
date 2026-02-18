@@ -8,7 +8,9 @@ service cloud.firestore {
       return request.auth != null && (
         request.auth.token.email == "arrozitocarlos1@gmail.com" || 
         request.auth.token.email == "carlitosnajdarg@gmail.com" ||
-        request.auth.token.email == "dueno@mrsmithbarpool.com"
+        request.auth.token.email == "dueno@mrsmithbarpool.com" ||
+        get(/databases/$(database)/documents/staff_members/$(request.auth.uid)).data.role == "Gerente" ||
+        get(/databases/$(database)/documents/staff_members/$(request.auth.uid)).data.role == "Dueño"
       );
     }
 
@@ -22,11 +24,10 @@ service cloud.firestore {
     // Los perfiles de staff son públicos. El admin o el dueño del perfil pueden escribir.
     match /staff_members/{staffId} {
       allow read: if true;
-      allow write: if isAdmin() || (request.auth != null && (request.auth.uid == staffId || request.auth.token.email == request.resource.data.email));
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid == staffId);
     }
 
     // Los rangos personalizados deben ser legibles por cualquier usuario logueado para cargar el panel.
-    // Solo los admins pueden crear o modificar rangos.
     match /custom_roles/{roleId} {
       allow read: if request.auth != null;
       allow write: if isAdmin();

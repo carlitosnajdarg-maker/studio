@@ -18,13 +18,13 @@
       "description": "Ítems del menú del bar pool.",
       "properties": {
         "id": { "type": "string" },
-        "name": { "type": "string" },
+        "title": { "type": "string" },
         "price": { "type": "number" },
         "imageUrl": { "type": "string", "format": "uri" },
-        "categoryId": { "type": "string" },
+        "category": { "type": "string" },
         "description": { "type": "string" }
       },
-      "required": ["id", "name", "price", "categoryId"]
+      "required": ["id", "title", "price", "category"]
     },
     "Staff": {
       "title": "Staff",
