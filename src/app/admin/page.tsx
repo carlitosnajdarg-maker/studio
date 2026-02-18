@@ -41,22 +41,30 @@ export default function AdminPage() {
 
   const [elapsedTime, setElapsedTime] = useState("00:00:00")
 
-  // Queries
+  // Queries - Staff and Ratings are public read in rules
   const staffQuery = useMemoFirebase(() => query(collection(db, "staff_members"), orderBy("name", "asc")), [db])
   const { data: staffList } = useCollection(staffQuery)
-
-  const rolesQuery = useMemoFirebase(() => query(collection(db, "custom_roles"), orderBy("name", "asc")), [db])
-  const { data: customRoles } = useCollection(rolesQuery)
 
   const ratingsQuery = useMemoFirebase(() => query(collection(db, "ratings")), [db])
   const { data: allRatings } = useCollection(ratingsQuery)
 
-  const logsQuery = useMemoFirebase(() => query(collection(db, "work_logs"), orderBy("startTime", "desc")), [db])
-  const { data: allLogs } = useCollection(logsQuery)
-
+  // Staff profile and permissions
   const staffProfile = staffList?.find(s => s.email?.toLowerCase() === user?.email?.toLowerCase())
   const isActualOwner = isOwner(user?.email) || staffProfile?.role === 'Dueño'
   const isActualAdmin = isAdmin(user?.email) || staffProfile?.role === 'Gerente' || isActualOwner
+
+  // Conditional queries - Only run if user is authenticated to avoid permission errors
+  const rolesQuery = useMemoFirebase(() => 
+    user ? query(collection(db, "custom_roles"), orderBy("name", "asc")) : null, 
+    [db, user]
+  )
+  const { data: customRoles } = useCollection(rolesQuery)
+
+  const logsQuery = useMemoFirebase(() => 
+    (user && isActualAdmin) ? query(collection(db, "work_logs"), orderBy("startTime", "desc")) : null, 
+    [db, user, isActualAdmin]
+  )
+  const { data: allLogs } = useCollection(logsQuery)
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -448,8 +456,8 @@ export default function AdminPage() {
               <CardHeader><CardTitle className="text-sm font-headline uppercase text-[#00F0FF]">Administración de Staff</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleSaveStaff} className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre Completo</Label><Input value={staffName} onChange={setStaffName} required className="bg-white/5 border-white/10 h-11" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Correo Google</Label><Input value={staffEmail} onChange={setStaffEmail} required className="bg-white/5 border-white/10 h-11" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre Completo</Label><Input value={staffName} onChange={(e) => setStaffName(e.target.value)} required className="bg-white/5 border-white/10 h-11" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Correo Google</Label><Input value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)} required className="bg-white/5 border-white/10 h-11" /></div>
                   <div className="space-y-1"><Label className="text-[10px] uppercase">Puesto / Rango</Label>
                     <select value={staffRole} onChange={e => setStaffRole(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-11 px-3 text-sm text-white">
                       <option value="Bartender">Bartender</option><option value="Mesero">Mesero</option><option value="Gerente">Gerente</option>
