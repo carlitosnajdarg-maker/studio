@@ -5,10 +5,10 @@ import { useState, useEffect } from "react"
 import { CategoryNav } from "@/components/menu/CategoryNav"
 import { MenuCard, MenuItemProps } from "@/components/menu/MenuCard"
 import { QuickActions } from "@/components/menu/QuickActions"
-import { useFirestore, useUser } from "@/firebase"
+import { useFirestore, useUser, useMemoFirebase, useCollection } from "@/firebase"
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore"
 import { QRCodeSVG } from "qrcode.react"
-import { isAdmin } from "@/lib/admin-config"
+import { isAdmin, isOwner } from "@/lib/admin-config"
 import {
   Dialog,
   DialogContent,
@@ -28,22 +28,20 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Todos")
   const [menuItems, setMenuItems] = useState<MenuItemProps[]>([])
   const [loading, setLoading] = useState(true)
-  const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [currentUrl, setCurrentUrl] = useState("")
+
+  // Verificación de Admin Dinámico
+  const staffQuery = useMemoFirebase(() => query(collection(db, "staff_members")), [db])
+  const { data: staffList } = useCollection(staffQuery)
+  
+  const userProfile = staffList?.find(s => s.email?.toLowerCase() === user?.email?.toLowerCase())
+  const userIsAdmin = isAdmin(user?.email) || userProfile?.role === 'Gerente' || userProfile?.role === 'Dueño' || isOwner(user?.email)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setCurrentUrl(window.location.href)
     }
   }, [])
-
-  useEffect(() => {
-    if (user) {
-      setUserIsAdmin(isAdmin(user.email))
-    } else {
-      setUserIsAdmin(false)
-    }
-  }, [user])
 
   useEffect(() => {
     if (!db) return
