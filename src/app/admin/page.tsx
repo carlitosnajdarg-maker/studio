@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Play, Pause, Square, Timer, Globe, AlertTriangle, Copy, Rocket, Info } from "lucide-react"
+import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Play, Pause, Square, Timer, Globe, AlertTriangle, Copy, Rocket } from "lucide-react"
 import Image from "next/image"
 
 export default function AdminPage() {
@@ -41,7 +41,6 @@ export default function AdminPage() {
   const [newRoleLevel, setNewRoleLevel] = useState("Staff")
 
   const [elapsedTime, setElapsedTime] = useState("00:00:00")
-  const [publicUrl, setPublicUrl] = useState("")
 
   // Queries
   const staffQuery = useMemoFirebase(() => query(collection(db, "staff_members"), orderBy("name", "asc")), [db])
@@ -59,12 +58,6 @@ export default function AdminPage() {
   const staffProfile = staffList?.find(s => s.email?.toLowerCase() === user?.email?.toLowerCase())
   const isActualOwner = isOwner(user?.email) || staffProfile?.role === 'Dueño'
   const isActualAdmin = isAdmin(user?.email) || staffProfile?.role === 'Gerente' || isActualOwner
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setPublicUrl(window.location.origin)
-    }
-  }, [])
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -252,11 +245,6 @@ export default function AdminPage() {
     return { avg, time: `${Math.floor(mins/60)}h ${mins%60}m` }
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "¡Copiado!", description: "Link copiado al portapapeles." });
-  }
-
   if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-[#120108] text-[#FF008A] font-bold">CARGANDO...</div>
 
   if (!user || (!isActualAdmin && !staffProfile)) {
@@ -277,20 +265,6 @@ export default function AdminPage() {
                 <Button onClick={() => signOut(auth)} variant="outline" className="w-full">Cerrar Sesión</Button>
               </div>
             )}
-            
-            <div className="mt-8 p-5 bg-[#FF008A]/5 rounded-2xl text-left border border-[#FF008A]/20">
-              <p className="text-[11px] font-bold text-[#FF008A] uppercase mb-3 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" /> Solución al Error "Workstation does not exist"
-              </p>
-              <div className="space-y-3 text-[10px] text-white/70 leading-relaxed">
-                <p>Si tus clientes ven una pantalla de error al escanear el QR:</p>
-                <ul className="list-disc pl-4 space-y-2">
-                  <li>Es porque estás usando el link de desarrollo que requiere tu cuenta.</li>
-                  <li>Como usas el plan gratuito, debes usar el link que termina en <b>.web.app</b> o <b>.firebaseapp.com</b>.</li>
-                  <li>Ve a la pantalla principal, abre el QR y pega allí tu link público para actualizarlo.</li>
-                </ul>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -299,7 +273,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#120108] text-white p-5 pb-32 max-w-5xl mx-auto font-body">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-[#1a020c] p-4 rounded-2xl border border-white/5">
+      <header className="flex justify-between items-center mb-8 bg-[#1a020c] p-4 rounded-2xl border border-white/5">
         <div className="flex items-center gap-3">
           <div className="bg-[#FF008A]/20 p-2 rounded-full border border-[#FF008A]/40">
             {isActualOwner ? <ShieldCheck className="w-6 h-6 text-[#00F0FF]" /> : <UserCircle className="w-6 h-6 text-[#FF008A]" />}
@@ -314,31 +288,18 @@ export default function AdminPage() {
         <Button onClick={() => signOut(auth)} size="sm" variant="ghost" className="rounded-full text-white/60"><LogOut className="w-4 h-4 mr-2" /> Salir</Button>
       </header>
 
-      {/* GUIA DE PUBLICACION PARA EL DUEÑO */}
+      {/* GUIA DE LANZAMIENTO */}
       {isActualAdmin && (
         <Card className="bg-blue-600/10 border-blue-500/30 mb-8 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-[10px] font-headline uppercase text-blue-400 flex items-center gap-2 tracking-widest">
-              <Rocket className="w-4 h-4" /> Cómo hacer público tu menú
+              <Rocket className="w-4 h-4" /> Cómo hacer pública tu web (Plan Spark)
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="p-3 bg-black/40 rounded-xl border border-white/5">
-              <p className="text-[11px] font-bold text-[#FF008A] uppercase mb-1 flex items-center gap-2">
-                <Globe className="w-3 h-3" /> Paso 1: Tu Link Público
-              </p>
-              <p className="text-[10px] text-white/60 mb-2 leading-tight">Busca en tu Consola de Firebase el dominio que termina en <b>.web.app</b>. Ese es el que verá la gente.</p>
-              <div className="flex gap-2 items-center bg-black/40 p-2 rounded border border-white/10">
-                <code className="text-[9px] flex-1 truncate text-white">{typeof window !== 'undefined' ? window.location.hostname : ''}</code>
-                <Button size="icon" variant="ghost" className="h-6 w-6 text-[#00F0FF]" onClick={() => copyToClipboard(typeof window !== 'undefined' ? window.location.hostname : '')}><Copy className="w-3 h-3" /></Button>
-              </div>
-            </div>
-            <div className="p-3 bg-black/40 rounded-xl border border-white/5">
-              <p className="text-[11px] font-bold text-[#FF008A] uppercase mb-1 flex items-center gap-2">
-                <ShieldCheck className="w-3 h-3" /> Paso 2: Autorizar el Login
-              </p>
-              <p className="text-[10px] text-white/60 leading-tight">Copia ese dominio de arriba y pégalo en <b>Authentication {'>'} Settings {'>'} Authorized domains</b> en la consola de Firebase para que el login funcione.</p>
-            </div>
+          <CardContent className="space-y-2 text-[11px] text-white/70">
+            <p>1. Busca tu URL de hosting en la consola de Firebase (ej: <b>mrsmith.web.app</b>).</p>
+            <p>2. Ve a <b>Authentication {'>'} Settings {'>'} Authorized domains</b> y añade esa URL.</p>
+            <p>3. Pega esa misma URL en el botón de QR de la pantalla principal para tus clientes.</p>
           </CardContent>
         </Card>
       )}

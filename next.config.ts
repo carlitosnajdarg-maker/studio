@@ -2,7 +2,7 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  // Activa el modo estático para que funcione en el Firebase Hosting gratuito
+  // Activa el modo estático para que funcione en el Firebase Hosting gratuito (Plan Spark)
   output: 'export',
   images: {
     unoptimized: true, // Necesario para el modo estático
