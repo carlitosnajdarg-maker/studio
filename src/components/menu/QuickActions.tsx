@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -71,13 +70,13 @@ export function QuickActions() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-3 gap-3 py-4">
-            {[1, 2, 5, 10, 20, 50].map((amount) => (
+            {[500, 1000, 2000, 5000, 10000, 20000].map((amount) => (
               <Button 
                 key={amount}
-                onClick={() => handleAction(`Has enviado €${amount} de propina.`)}
+                onClick={() => handleAction(`Has enviado $${amount.toLocaleString('es-AR')} de propina.`)}
                 className="bg-white/5 hover:bg-[#FF008A] border-none text-white font-bold h-16 text-lg"
               >
-                €{amount}
+                ${amount.toLocaleString('es-AR')}
               </Button>
             ))}
           </div>

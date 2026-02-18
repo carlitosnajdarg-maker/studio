@@ -1,4 +1,3 @@
-
 "use client"
 
 import Image from "next/image"
@@ -47,7 +46,7 @@ export function MenuCard({ title, category, description, price, imageUrl, metada
           {description}
         </p>
         <div className="mt-auto pt-2 flex items-center justify-between">
-          <span className="text-white font-bold text-xl">€{price.toFixed(2)}</span>
+          <span className="text-white font-bold text-xl">${price.toLocaleString('es-AR')}</span>
           <button className="p-2 rounded-full bg-white/5 text-[#00F0FF] hover:bg-[#FF008A] hover:text-white transition-all duration-300">
             <Info className="w-4 h-4" />
           </button>

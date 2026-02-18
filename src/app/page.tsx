@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -11,10 +10,10 @@ const MENU_DATA: MenuItemProps[] = [
   // Drinks
   {
     id: "d1",
-    title: "Mojito Ultraviolet",
+    title: "Mojito Ultravioleta",
     category: "Tragos",
     description: "Ron blanco, menta fresca, lima, azúcar de caña y un toque de flor de butterfly pea.",
-    price: 9.50,
+    price: 9500,
     imageUrl: PlaceHolderImages.find(img => img.id === 'cocktail-2')?.imageUrl || "",
     metadata: "Sugerencia del chef",
     isAlcoholic: true
@@ -23,10 +22,10 @@ const MENU_DATA: MenuItemProps[] = [
     id: "d2",
     title: "Electric Gin & Tonic",
     category: "Tragos",
-    description: "Gin premium, tónica premium, bayas de enebro y una rodaja de pepino neon.",
-    price: 12.00,
+    description: "Gin premium, tónica premium, bayas de enebro y una rodaja de pepino neón.",
+    price: 12000,
     imageUrl: PlaceHolderImages.find(img => img.id === 'cocktail-1')?.imageUrl || "",
-    metadata: "Best Seller",
+    metadata: "Más Vendido",
     isAlcoholic: true
   },
   {
@@ -34,9 +33,9 @@ const MENU_DATA: MenuItemProps[] = [
     title: "Cerveza Artesanal IPA",
     category: "Bebidas c/ Alcohol",
     description: "Intensa, cítrica y con un amargor balanceado. 6.5% ABV.",
-    price: 6.50,
+    price: 6500,
     imageUrl: PlaceHolderImages.find(img => img.id === 'beer-1')?.imageUrl || "",
-    metadata: "Local Brew",
+    metadata: "Cerveza Local",
     isAlcoholic: true
   },
   {
@@ -44,7 +43,7 @@ const MENU_DATA: MenuItemProps[] = [
     title: "Limonada de Menta y Jengibre",
     category: "Bebidas s/ Alcohol",
     description: "Refrescante combinación natural servida con hielo frappé.",
-    price: 4.50,
+    price: 4500,
     imageUrl: PlaceHolderImages.find(img => img.id === 'cocktail-1')?.imageUrl || "",
     isAlcoholic: false
   },
@@ -53,8 +52,8 @@ const MENU_DATA: MenuItemProps[] = [
     id: "f1",
     title: "Cyber Burger 2077",
     category: "Comidas",
-    description: "Carne dry-aged, queso cheddar fundido, cebolla caramelizada y salsa secreta magenta.",
-    price: 14.90,
+    description: "Carne madurada, queso cheddar fundido, cebolla caramelizada y salsa secreta magenta.",
+    price: 14900,
     imageUrl: PlaceHolderImages.find(img => img.id === 'food-1')?.imageUrl || "",
     metadata: "Extremadamente Picante",
   },
@@ -63,7 +62,7 @@ const MENU_DATA: MenuItemProps[] = [
     title: "Nachos Ultravioleta",
     category: "Comidas",
     description: "Tortillas de maíz azul, guacamole artesanal, pico de gallo y sour cream.",
-    price: 11.50,
+    price: 11500,
     imageUrl: PlaceHolderImages.find(img => img.id === 'food-2')?.imageUrl || "",
   },
   // Tokens
@@ -72,7 +71,7 @@ const MENU_DATA: MenuItemProps[] = [
     title: "Ficha de Juego Premium",
     category: "Fichas",
     description: "Acceso a 1 hora de mesa de pool profesional con equipo incluido.",
-    price: 10.00,
+    price: 10000,
     imageUrl: PlaceHolderImages.find(img => img.id === 'billiards-1')?.imageUrl || "",
     metadata: "Reserva prioritaria",
   },
@@ -81,7 +80,7 @@ const MENU_DATA: MenuItemProps[] = [
     title: "Pack VIP 5 Fichas",
     category: "Fichas",
     description: "Ahorra con nuestro pack de 5 fichas para una noche completa de juego.",
-    price: 40.00,
+    price: 40000,
     imageUrl: PlaceHolderImages.find(img => img.id === 'billiards-1')?.imageUrl || "",
     metadata: "Ahorra 20%",
   }
