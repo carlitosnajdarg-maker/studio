@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp, setDoc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Copy, Play, Pause, Square, UserPlus, Settings2, Timer, Globe, CheckCircle2, ExternalLink } from "lucide-react"
+import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Copy, Play, Pause, Square, UserPlus, Settings2, Timer, Globe, CheckCircle2, ExternalLink, AlertTriangle, Rocket } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -264,18 +264,34 @@ export default function AdminPage() {
           <CardContent className="flex flex-col gap-4 text-center">
             <p className="text-sm text-[#B0B0B0]">Debes estar registrado por un administrador.</p>
             {!user ? (
-              <Button onClick={handleLogin} className="bg-[#FF008A] h-14 font-bold text-lg neon-glow-magenta">Entrar con Google</Button>
+              <Button onClick={handleLogin} className="bg-[#FF008A] h-14 font-bold text-lg neon-glow-magenta w-full">Entrar con Google</Button>
             ) : (
               <div className="space-y-4">
                 <p className="text-red-400 text-xs font-bold">Sin permisos: {user.email}</p>
-                <Button onClick={() => signOut(auth)} variant="outline">Cerrar Sesión</Button>
+                <Button onClick={() => signOut(auth)} variant="outline" className="w-full">Cerrar Sesión</Button>
               </div>
             )}
+            
+            <div className="mt-8 p-5 bg-[#FF008A]/5 rounded-2xl text-left border border-[#FF008A]/20">
+              <p className="text-[11px] font-bold text-[#FF008A] uppercase mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" /> Solución al Error "Welcome"
+              </p>
+              <div className="space-y-3 text-[10px] text-white/70 leading-relaxed">
+                <p>Si al entrar a tu URL de Firebase ves una pantalla de "Welcome" azul/gris:</p>
+                <ol className="list-decimal pl-4 space-y-2">
+                  <li>Es porque estás entrando a <b>Firebase Hosting</b> (estático).</li>
+                  <li>Para NextJS, Mr. Smith usa <b>Firebase App Hosting</b> (dinámico).</li>
+                  <li>Ve a la Consola de Firebase &gt; <b>App Hosting</b> y busca el enlace que termina en <span className="text-[#00F0FF]">.apphosting.run</span>.</li>
+                  <li>Ese es el enlace real que debes usar para el QR.</li>
+                </ol>
+              </div>
+            </div>
+
             <div className="mt-4 p-4 bg-[#00F0FF]/5 rounded-xl text-left border border-[#00F0FF]/20">
               <p className="text-[10px] font-bold text-[#00F0FF] uppercase mb-2 flex items-center gap-2">
-                <Globe className="w-3 h-3" /> Paso 1: Autorizar Dominio
+                <Globe className="w-3 h-3" /> Autorizar Dominio
               </p>
-              <p className="text-[10px] text-white/60 mb-2 leading-tight">Copia esto en Authentication &gt; Settings &gt; Authorized domains:</p>
+              <p className="text-[10px] text-white/60 mb-2 leading-tight">Si el login falla, añade este dominio en Firebase Auth:</p>
               <div className="flex gap-2 items-center bg-black/40 p-2 rounded border border-white/10">
                 <code className="text-[9px] flex-1 truncate text-white">{typeof window !== 'undefined' ? window.location.hostname : ''}</code>
                 <Button size="icon" variant="ghost" className="h-6 w-6 text-[#00F0FF]" onClick={() => {
@@ -283,9 +299,6 @@ export default function AdminPage() {
                   toast({ title: "Copiado" })
                 }}><Copy className="w-3 h-3" /></Button>
               </div>
-              <Link href="https://console.firebase.google.com/" target="_blank">
-                <Button variant="link" className="text-[9px] text-[#00F0FF] h-auto p-0 mt-2 uppercase font-bold">Ir a Consola Firebase <ExternalLink className="w-2 h-2 ml-1" /></Button>
-              </Link>
             </div>
           </CardContent>
         </Card>
@@ -295,7 +308,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#120108] text-white p-5 pb-32 max-w-5xl mx-auto font-body">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-[#1a020c] p-4 rounded-2xl border border-white/5">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-[#1a020c] p-4 rounded-2xl border border-white/5 shadow-2xl">
         <div className="flex items-center gap-3">
           <div className="bg-[#FF008A]/20 p-2 rounded-full border border-[#FF008A]/40">
             {isActualOwner ? <ShieldCheck className="w-6 h-6 text-[#00F0FF]" /> : <UserCircle className="w-6 h-6 text-[#FF008A]" />}
@@ -314,21 +327,21 @@ export default function AdminPage() {
 
       {/* SECCION DE PUBLICACION (SOLO DUEÑO) */}
       {isActualOwner && (
-        <Card className="bg-[#1a020c] border-[#00F0FF]/20 mb-8 border-dashed">
+        <Card className="bg-[#1a020c] border-[#00F0FF]/30 mb-8 border-dashed shadow-[0_0_20px_rgba(0,240,255,0.05)]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-headline uppercase text-[#00F0FF] flex items-center gap-2">
-              <Globe className="w-4 h-4" /> ¿Cómo hacer pública la web?
+              <Rocket className="w-5 h-5" /> ¿Cómo ver la Web Real?
             </CardTitle>
-            <CardDescription className="text-[10px] text-white/50">Sigue estos pasos para que tus clientes vean el menú desde sus celulares.</CardDescription>
+            <CardDescription className="text-[10px] text-white/50">Si ves el cartel azul de "Welcome", sigue estos pasos:</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2 text-[11px]">
-            <div className="p-3 bg-white/5 rounded-lg border border-white/10">
-              <p className="font-bold text-[#FF008A] mb-1">1. URL DE PRODUCCIÓN</p>
-              <p className="leading-tight">Una vez que publiques tu app en Hosting, recibirás una URL como <span className="text-[#00F0FF]">mrsmith.web.app</span>. Esa es la URL que debes usar para el QR.</p>
+          <CardContent className="grid gap-4 sm:grid-cols-2 text-[11px]">
+            <div className="p-3 bg-white/5 rounded-lg border border-white/10 space-y-2">
+              <p className="font-bold text-[#FF008A] uppercase">1. El Enlace Correcto</p>
+              <p className="leading-relaxed">No uses el que termina en <span className="text-[#00F0FF]">.web.app</span> si ves el error. Busca en la consola el enlace de <b>App Hosting</b> que termina en <span className="text-[#00F0FF]">.run.app</span> o <span className="text-[#00F0FF]">.apphosting.run</span>.</p>
             </div>
-            <div className="p-3 bg-white/5 rounded-lg border border-white/10">
-              <p className="font-bold text-[#FF008A] mb-1">2. QR PARA MESAS</p>
-              <p className="leading-tight">En la página principal, haz clic en el icono de QR y pega tu URL de Hosting. El QR se actualizará para que tus clientes entren directo.</p>
+            <div className="p-3 bg-white/5 rounded-lg border border-white/10 space-y-2">
+              <p className="font-bold text-[#FF008A] uppercase">2. Configura el QR</p>
+              <p className="leading-relaxed">Esa URL de App Hosting es la que debes poner en el botón de QR de la página principal para que tus clientes entren directo al menú.</p>
             </div>
           </CardContent>
         </Card>
@@ -354,7 +367,7 @@ export default function AdminPage() {
               
               <div className="flex gap-3 w-full sm:w-auto">
                 {!staffProfile.activeSession ? (
-                  <Button onClick={handleStartWork} className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 h-16 px-8 font-bold text-lg uppercase">
+                  <Button onClick={handleStartWork} className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 h-16 px-8 font-bold text-lg uppercase shadow-lg">
                     <Play className="w-6 h-6 mr-2" /> Iniciar Turno
                   </Button>
                 ) : (
@@ -424,7 +437,7 @@ export default function AdminPage() {
 
           <div className="grid gap-3">
             {menuItems.map(item => (
-              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5">
+              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5 transition-all hover:bg-white/5">
                 <div className="flex items-center gap-4">
                   <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-white/10">
                     <Image src={item.imageUrl} alt="" fill className="object-cover" />
@@ -471,7 +484,7 @@ export default function AdminPage() {
               const { avg, time } = getStaffStats(staff.id)
               const session = staff.activeSession
               return (
-                <Card key={staff.id} className="bg-[#1a020c] border-white/5 overflow-hidden">
+                <Card key={staff.id} className="bg-[#1a020c] border-white/5 overflow-hidden group">
                   <CardContent className="pt-5">
                     <div className="flex justify-between items-start mb-4">
                       <div>
@@ -507,13 +520,13 @@ export default function AdminPage() {
               <CardHeader><CardTitle className="text-lg font-headline uppercase text-purple-600">Crear Rangos del Bar</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleCreateRole} className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre del Puesto</Label><Input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} placeholder="Ej: DJ, Seguridad" required className="bg-white/5 border-white/10" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nivel de Acceso</Label>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase text-white/50">Nombre del Puesto</Label><Input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} placeholder="Ej: DJ, Seguridad" required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase text-white/50">Nivel de Acceso</Label>
                     <select value={newRoleLevel} onChange={e => setNewRoleLevel(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
                       <option value="Staff">Personal (Solo Reloj)</option><option value="Gerente">Gerencia (Editar Menú)</option><option value="Dueño">Dueño (Control Total)</option>
                     </select>
                   </div>
-                  <Button type="submit" className="md:col-span-2 bg-purple-600 hover:bg-purple-700 font-bold uppercase"><Plus className="w-4 h-4 mr-2" /> Guardar Rango</Button>
+                  <Button type="submit" className="md:col-span-2 bg-purple-600 hover:bg-purple-700 font-bold uppercase shadow-lg"><Plus className="w-4 h-4 mr-2" /> Guardar Rango</Button>
                 </form>
               </CardContent>
             </Card>
@@ -535,3 +548,5 @@ export default function AdminPage() {
     </div>
   )
 }
+
+    
