@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -38,7 +39,6 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      // Intentamos detectar si es una URL de dev o prod
       setPublicUrl(window.location.origin)
     }
   }, [])
@@ -97,7 +97,7 @@ export default function Home() {
                 {isDevUrl && userIsAdmin && (
                   <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex flex-col gap-2">
                     <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 uppercase"><AlertCircle className="w-3 h-3" /> ¡Atención!</p>
-                    <p className="text-[10px] text-white/80 leading-tight">La URL de esta "Workstation" es privada. Cuando despliegues tu app a producción, pega aquí la URL de Hosting (ej: .web.app) para generar el QR que verán los clientes:</p>
+                    <p className="text-[10px] text-white/80 leading-tight">Esta URL es privada. Para generar el QR real de tus mesas, pega aquí la URL de Hosting cuando despliegues:</p>
                     <Input 
                       value={publicUrl} 
                       onChange={(e) => setPublicUrl(e.target.value)} 
@@ -127,6 +127,11 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-2 gap-4">
             {filteredItems.map((item) => <MenuCard key={item.id} {...item} />)}
+            {filteredItems.length === 0 && (
+              <div className="col-span-2 py-20 text-center">
+                <p className="text-white/20 italic uppercase font-bold text-xs tracking-widest">Aún no hay ítems en esta categoría</p>
+              </div>
+            )}
           </div>
         )}
       </main>

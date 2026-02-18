@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Configuración de jerarquía y permisos del bar.
  */

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -11,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, Clock, Star, Users, UserCircle, Edit2, Upload, Loader2, Info, Copy } from "lucide-react"
+import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Copy, AlertCircle, Info } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -75,14 +76,14 @@ export default function AdminPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      if (file.size > 800 * 1024) { // Limite 800KB para Base64
-        toast({ title: "Archivo grande", description: "Usa una imagen de menos de 800KB para mejor rendimiento.", variant: "destructive" })
+      if (file.size > 800 * 1024) {
+        toast({ title: "Archivo demasiado grande", description: "Usa una imagen de menos de 800KB.", variant: "destructive" })
         return
       }
       const reader = new FileReader()
       reader.onloadend = () => {
         setImageUrl(reader.result as string)
-        toast({ title: "Imagen lista", description: "Foto cargada correctamente." })
+        toast({ title: "Foto cargada", description: "La imagen se ha procesado correctamente." })
       }
       reader.readAsDataURL(file)
     }
@@ -109,14 +110,14 @@ export default function AdminPage() {
 
       if (editingId) {
         await updateDoc(doc(db, "menu", editingId), itemData)
-        toast({ title: "Actualizado", description: `${title} modificado.` })
+        toast({ title: "Producto actualizado" })
       } else {
         await addDoc(collection(db, "menu"), { ...itemData, createdAt: serverTimestamp() })
-        toast({ title: "Añadido", description: `${title} en el menú.` })
+        toast({ title: "Producto añadido" })
       }
       resetMenuForm()
     } catch (e) {
-      toast({ title: "Sin permiso", description: "Solo staff autorizado puede editar el menú.", variant: "destructive" })
+      toast({ title: "Error", description: "No tienes permisos suficientes.", variant: "destructive" })
     }
   }
 
@@ -137,11 +138,11 @@ export default function AdminPage() {
         toast({ title: "Staff actualizado" })
       } else {
         await addDoc(collection(db, "staff_members"), { ...staffData, createdAt: serverTimestamp(), activeSession: null })
-        toast({ title: "Staff registrado" })
+        toast({ title: "Personal registrado" })
       }
       resetStaffForm()
     } catch (e) {
-      toast({ title: "Error", variant: "destructive" })
+      toast({ title: "Error al guardar staff", variant: "destructive" })
     }
   }
 
@@ -178,7 +179,7 @@ export default function AdminPage() {
     return { avg, time: `${Math.floor(mins/60)}h ${mins%60}m` }
   }
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-[#120108] text-[#FF008A] font-bold">CARGANDO...</div>
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-[#120108] text-[#FF008A] font-bold">CONECTANDO...</div>
 
   if (!user || (!isActualAdmin && !staffProfile)) {
     return (
@@ -189,7 +190,7 @@ export default function AdminPage() {
             <CardTitle className="text-2xl font-headline uppercase">Acceso Restringido</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 text-center">
-            <p className="text-sm text-[#B0B0B0]">Identifícate para gestionar el bar.</p>
+            <p className="text-sm text-[#B0B0B0]">Identifícate para entrar al panel de Mr. Smith.</p>
             {!user ? (
               <Button onClick={handleLogin} className="bg-[#FF008A] h-14 font-bold text-lg">Entrar con Google</Button>
             ) : (
@@ -198,20 +199,20 @@ export default function AdminPage() {
                 <Button onClick={() => signOut(auth)} variant="outline">Cerrar Sesión</Button>
               </div>
             )}
-            <div className="mt-4 p-4 bg-white/5 rounded-xl text-left">
+            <div className="mt-4 p-4 bg-white/5 rounded-xl text-left border border-white/10">
               <p className="text-[10px] font-bold text-[#00F0FF] uppercase mb-2">Paso 1: Autorizar Dominio</p>
-              <div className="flex gap-2 items-center bg-black/40 p-2 rounded border border-white/10">
+              <div className="flex gap-2 items-center bg-black/40 p-2 rounded border border-white/10 mb-2">
                 <code className="text-[9px] flex-1 truncate">{typeof window !== 'undefined' ? window.location.hostname : ''}</code>
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => {
                   navigator.clipboard.writeText(window.location.hostname)
-                  toast({ title: "Copiado", description: "Pégalo en la consola de Firebase." })
+                  toast({ title: "Copiado", description: "Pega este dominio en la consola de Firebase." })
                 }}><Copy className="w-3 h-3" /></Button>
               </div>
               <Link href="https://console.firebase.google.com/" target="_blank">
-                <Button variant="link" className="text-[#FF008A] text-[10px] p-0 h-auto mt-2">Ir a Consola Firebase →</Button>
+                <Button variant="link" className="text-[#FF008A] text-[10px] p-0 h-auto">Ir a Consola Firebase →</Button>
               </Link>
             </div>
-            <Link href="/" className="text-xs text-[#00F0FF] hover:underline mt-4 inline-block">← Volver al Menú</Link>
+            <Link href="/" className="text-xs text-[#00F0FF] hover:underline mt-4 inline-block">← Volver al Menú Público</Link>
           </CardContent>
         </Card>
       </div>
@@ -227,69 +228,78 @@ export default function AdminPage() {
           </div>
           <div>
             <h1 className="text-lg font-headline font-bold uppercase text-[#FF008A]">
-              {isActualOwner ? 'Panel Dueño' : (staffProfile?.role === 'Gerente' ? 'Gerencia' : 'Staff')}
+              {isActualOwner ? 'Panel Dueño' : (staffProfile?.role === 'Gerente' ? 'Panel Gerencia' : 'Acceso Staff')}
             </h1>
             <p className="text-[9px] text-[#B0B0B0] font-bold uppercase">{user.email}</p>
           </div>
         </div>
         <div className="flex gap-2">
           {staffProfile && (
-            <Button onClick={handleClockToggle} variant={staffProfile.activeSession ? "destructive" : "default"} size="sm">
+            <Button onClick={handleClockToggle} variant={staffProfile.activeSession ? "destructive" : "default"} size="sm" className="font-bold">
               <Clock className="w-4 h-4 mr-2" />
-              {staffProfile.activeSession ? "Salida" : "Entrada"}
+              {staffProfile.activeSession ? "Marcar Salida" : "Marcar Entrada"}
             </Button>
           )}
-          <Button onClick={() => signOut(auth)} size="icon" variant="ghost" className="rounded-full"><LogOut className="w-4 h-4" /></Button>
+          <Button onClick={() => signOut(auth)} size="icon" variant="ghost" className="rounded-full hover:bg-white/5"><LogOut className="w-4 h-4" /></Button>
         </div>
       </header>
 
       <Tabs defaultValue="menu">
-        <TabsList className="grid w-full grid-cols-2 bg-[#1a020c] mb-6">
-          <TabsTrigger value="menu" className="uppercase font-bold text-xs">Menú</TabsTrigger>
-          <TabsTrigger value="staff" className="uppercase font-bold text-xs">Personal</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-[#1a020c] mb-6 p-1 border border-white/5">
+          <TabsTrigger value="menu" className="uppercase font-bold text-xs data-[state=active]:bg-[#FF008A]">Gestión Menú</TabsTrigger>
+          <TabsTrigger value="staff" className="uppercase font-bold text-xs data-[state=active]:bg-[#00F0FF] data-[state=active]:text-[#120108]">Gestión Personal</TabsTrigger>
         </TabsList>
 
         <TabsContent value="menu" className="space-y-6">
           <Card className="bg-[#1a020c] border-[#FF008A]/30">
             <CardHeader>
-              <CardTitle className="text-lg font-headline uppercase text-[#FF008A] flex justify-between">
-                {editingId ? 'Editar Producto' : 'Nuevo Producto'}
-                {editingId && <Button variant="ghost" size="sm" onClick={resetMenuForm}>X</Button>}
+              <CardTitle className="text-lg font-headline uppercase text-[#FF008A] flex justify-between items-center">
+                {editingId ? 'Editar Producto' : 'Añadir Nuevo Producto'}
+                {editingId && <Button variant="ghost" size="sm" onClick={resetMenuForm} className="text-white/40">Cancelar</Button>}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSaveItem} className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre</Label><Input value={title} onChange={e => setTitle(e.target.value)} required className="bg-white/5" /></div>
-                <div className="space-y-1"><Label className="text-[10px] uppercase">Categoría</Label>
-                  <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-md h-10 px-3 text-sm">
+                <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Nombre</Label><Input value={title} onChange={e => setTitle(e.target.value)} required className="bg-white/5 border-white/10" /></div>
+                <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Categoría</Label>
+                  <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
                     <option value="Tragos">Tragos</option><option value="Bebidas c/ Alcohol">Bebidas c/ Alcohol</option><option value="Bebidas s/ Alcohol">Bebidas s/ Alcohol</option><option value="Comidas">Comidas</option><option value="Fichas">Fichas</option>
                   </select>
                 </div>
-                <div className="space-y-1"><Label className="text-[10px] uppercase">Precio ($)</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="bg-white/5" /></div>
+                <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Precio ($)</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="bg-white/5 border-white/10" /></div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase">Foto</Label>
+                  <Label className="text-[10px] uppercase text-[#B0B0B0]">Imagen (Archivo o URL)</Label>
                   <div className="flex gap-2">
-                    <Input value={imageUrl.startsWith('data:') ? "" : imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="URL..." className="bg-white/5" />
-                    <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()}><Upload className="w-4 h-4" /></Button>
+                    <Input value={imageUrl.startsWith('data:') ? "Imagen cargada localmente" : imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." className="bg-white/5 border-white/10" disabled={imageUrl.startsWith('data:')} />
+                    <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} className="shrink-0 border-[#00F0FF]/30 text-[#00F0FF]"><Upload className="w-4 h-4" /></Button>
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                   </div>
                 </div>
-                <div className="md:col-span-2 space-y-1"><Label className="text-[10px] uppercase">Descripción</Label><Input value={description} onChange={e => setDescription(e.target.value)} className="bg-white/5" /></div>
-                <Button type="submit" className="md:col-span-2 bg-[#FF008A] font-bold uppercase">{editingId ? 'Guardar Cambios' : 'Publicar'}</Button>
+                <div className="md:col-span-2 space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Descripción Corta</Label><Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Ej: Fernet con Coca y mucho hielo" className="bg-white/5 border-white/10" /></div>
+                <Button type="submit" className="md:col-span-2 bg-[#FF008A] hover:bg-[#FF008A]/80 font-bold uppercase py-6 shadow-[0_0_15px_rgba(255,0,138,0.4)]">
+                  {editingId ? 'Guardar Cambios' : 'Publicar en el Menú'}
+                </Button>
               </form>
             </CardContent>
           </Card>
 
-          <div className="grid gap-2">
+          <div className="grid gap-3">
+            <h3 className="text-xs font-bold uppercase text-[#B0B0B0] ml-1">Lista Actual</h3>
             {menuItems.map(item => (
-              <div key={item.id} className="flex items-center justify-between p-2 bg-[#1a020c] rounded-lg border border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="relative w-10 h-10 rounded overflow-hidden"><Image src={item.imageUrl} alt="" fill className="object-cover" /></div>
-                  <div><p className="text-sm font-bold">{item.title}</p><p className="text-[10px] text-[#00F0FF]">${item.price}</p></div>
+              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-white/10">
+                    <Image src={item.imageUrl} alt="" fill className="object-cover" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white leading-none">{item.title}</p>
+                    <p className="text-[10px] text-[#00F0FF] font-bold mt-1">${item.price.toLocaleString('es-AR')}</p>
+                    <p className="text-[9px] text-white/40 uppercase">{item.category}</p>
+                  </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button onClick={() => handleEditItem(item)} variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-[#00F0FF]"><Edit2 className="w-3 h-3" /></Button>
-                  {isActualAdmin && <Button onClick={async () => { if(confirm("¿Eliminar?")) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-red-500"><Trash2 className="w-3 h-3" /></Button>}
+                  <Button onClick={() => handleEditItem(item)} variant="ghost" size="icon" className="h-9 w-9 text-white/40 hover:text-[#00F0FF] hover:bg-[#00F0FF]/10"><Edit2 className="w-4 h-4" /></Button>
+                  {isActualAdmin && <Button onClick={async () => { if(confirm(`¿Eliminar ${item.title}?`)) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="h-9 w-9 text-white/40 hover:text-red-500 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></Button>}
                 </div>
               </div>
             ))}
@@ -299,18 +309,20 @@ export default function AdminPage() {
         <TabsContent value="staff" className="space-y-6">
           {isActualAdmin && (
             <Card className="bg-[#1a020c] border-[#00F0FF]/30">
-              <CardHeader><CardTitle className="text-lg font-headline uppercase text-[#00F0FF]">{editingStaffId ? 'Editar Staff' : 'Nuevo Staff'}</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg font-headline uppercase text-[#00F0FF]">{editingStaffId ? 'Modificar Personal' : 'Dar de Alta Personal'}</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleSaveStaff} className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre</Label><Input value={staffName} onChange={e => setStaffName(e.target.value)} required className="bg-white/5" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Email Google</Label><Input value={staffEmail} onChange={e => setStaffEmail(e.target.value)} required className="bg-white/5" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Rol</Label>
-                    <select value={staffRole} onChange={e => setStaffRole(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-md h-10 px-3 text-sm">
+                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Nombre</Label><Input value={staffName} onChange={e => setStaffName(e.target.value)} required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Email de Google</Label><Input value={staffEmail} onChange={e => setStaffEmail(e.target.value)} required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Rol / Categoría</Label>
+                    <select value={staffRole} onChange={e => setStaffRole(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
                       <option value="Bartender">Bartender</option><option value="Mesero">Mesero</option><option value="Seguridad">Seguridad</option>
                       <option value="Gerente">Gerente</option>{isActualOwner && <option value="Dueño">Dueño</option>}
                     </select>
                   </div>
-                  <Button type="submit" className="md:col-span-3 bg-[#00F0FF] text-[#120108] font-bold uppercase">{editingStaffId ? 'Guardar Cambios' : 'Registrar'}</Button>
+                  <Button type="submit" className="md:col-span-3 bg-[#00F0FF] text-[#120108] font-bold uppercase py-6 shadow-[0_0_15px_rgba(0,240,255,0.4)]">
+                    {editingStaffId ? 'Guardar Cambios' : 'Registrar en el Sistema'}
+                  </Button>
                 </form>
               </CardContent>
             </Card>
@@ -320,24 +332,30 @@ export default function AdminPage() {
             {staffList?.map(staff => {
               const { avg, time } = getStaffStats(staff.id)
               return (
-                <Card key={staff.id} className="bg-[#1a020c] border-white/5 overflow-hidden">
-                  <CardContent className="pt-4">
+                <Card key={staff.id} className="bg-[#1a020c] border-white/5 overflow-hidden group">
+                  <CardContent className="pt-5">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-bold">{staff.name}</p>
-                          {isActualAdmin && <button onClick={() => { setEditingStaffId(staff.id); setStaffName(staff.name); setStaffEmail(staff.email); setStaffRole(staff.role); }} className="text-white/20 hover:text-[#00F0FF]"><Edit2 className="w-3 h-3" /></button>}
+                          <p className="font-bold text-white">{staff.name}</p>
+                          {isActualAdmin && <button onClick={() => { setEditingStaffId(staff.id); setStaffName(staff.name); setStaffEmail(staff.email); setStaffRole(staff.role); }} className="text-white/20 hover:text-[#00F0FF]"><Edit2 className="w-3.5 h-3.5" /></button>}
                         </div>
-                        <p className="text-[9px] font-bold text-[#FF008A] uppercase">{staff.role}</p>
+                        <p className="text-[9px] font-bold text-[#FF008A] uppercase tracking-wider">{staff.role}</p>
                       </div>
                       <div className="flex flex-col items-end">
-                        <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold"><Star className="w-3 h-3 fill-current" /> {avg}</div>
-                        {staff.activeSession && <div className="text-[8px] bg-green-500/20 text-green-500 px-2 rounded-full animate-pulse">EN TURNO</div>}
+                        <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold"><Star className="w-3.5 h-3.5 fill-current" /> {avg}</div>
+                        {staff.activeSession && <div className="text-[8px] bg-green-500/20 text-green-500 px-2 py-0.5 rounded-full mt-1 animate-pulse font-bold">EN TURNO</div>}
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-3">
-                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0]">Semana</p><p className="font-headline font-bold text-[#FF008A]">{time}</p></div>
-                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0]">Reseñas</p><p className="font-headline font-bold text-[#00F0FF]">{allRatings?.filter(r => r.staffId === staff.id).length || 0}</p></div>
+                    <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-4">
+                      <div className="text-center">
+                        <p className="text-[8px] uppercase text-[#B0B0B0] font-bold">Semana</p>
+                        <p className="font-headline font-bold text-[#FF008A] text-sm">{time}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[8px] uppercase text-[#B0B0B0] font-bold">Reseñas</p>
+                        <p className="font-headline font-bold text-[#00F0FF] text-sm">{allRatings?.filter(r => r.staffId === staff.id).length || 0}</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
