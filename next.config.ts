@@ -1,14 +1,11 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Activa el modo estático para que funcione en el Firebase Hosting gratuito
+  output: 'export',
   images: {
+    unoptimized: true, // Necesario para el modo estático
     remotePatterns: [
       {
         protocol: 'https',
@@ -29,6 +26,12 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 };
 

@@ -10,10 +10,9 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp, setDoc } from "firebase/firestore"
+import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Copy, Play, Pause, Square, UserPlus, Settings2, Timer, Globe, CheckCircle2, ExternalLink, AlertTriangle, Rocket } from "lucide-react"
-import Link from "next/link"
+import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Play, Pause, Square, Timer, Globe, AlertTriangle, Copy, Rocket } from "lucide-react"
 import Image from "next/image"
 
 export default function AdminPage() {
@@ -27,23 +26,20 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null)
   
-  // Menu Form states
+  // Form states
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("Tragos")
   const [price, setPrice] = useState("")
   const [description, setDescription] = useState("")
   const [imageUrl, setImageUrl] = useState("")
 
-  // Staff Form states
   const [staffName, setStaffName] = useState("")
   const [staffEmail, setStaffEmail] = useState("")
   const [staffRole, setStaffRole] = useState("Bartender")
 
-  // Roles Form states
   const [newRoleName, setNewRoleName] = useState("")
   const [newRoleLevel, setNewRoleLevel] = useState("Staff")
 
-  // Clock state for UI display
   const [elapsedTime, setElapsedTime] = useState("00:00:00")
 
   // Queries
@@ -59,7 +55,6 @@ export default function AdminPage() {
   const logsQuery = useMemoFirebase(() => query(collection(db, "work_logs"), orderBy("startTime", "desc")), [db])
   const { data: allLogs } = useCollection(logsQuery)
 
-  // Determine actual role
   const staffProfile = staffList?.find(s => s.email?.toLowerCase() === user?.email?.toLowerCase())
   const isActualOwner = isOwner(user?.email) || staffProfile?.role === 'Dueño'
   const isActualAdmin = isAdmin(user?.email) || staffProfile?.role === 'Gerente' || isActualOwner
@@ -99,7 +94,7 @@ export default function AdminPage() {
     try {
       await signInWithPopup(auth, provider)
     } catch (error: any) {
-      toast({ title: "Error de dominio", description: "Verifica los dominios autorizados en Firebase.", variant: "destructive" })
+      toast({ title: "Error de login", description: "Verifica los dominios autorizados.", variant: "destructive" })
     }
   }
 
@@ -128,14 +123,14 @@ export default function AdminPage() {
       }
       if (editingId) {
         await updateDoc(doc(db, "menu", editingId), itemData)
-        toast({ title: "Actualizado correctamente" })
+        toast({ title: "Actualizado" })
       } else {
         await addDoc(collection(db, "menu"), { ...itemData, createdAt: serverTimestamp() })
-        toast({ title: "Añadido al menú" })
+        toast({ title: "Añadido" })
       }
       resetMenuForm()
     } catch (e) {
-      toast({ title: "Error", description: "No tienes permisos.", variant: "destructive" })
+      toast({ title: "Error de permisos", variant: "destructive" })
     }
   }
 
@@ -153,14 +148,14 @@ export default function AdminPage() {
       }
       if (editingStaffId) {
         await updateDoc(doc(db, "staff_members", editingStaffId), staffData)
-        toast({ title: "Perfil actualizado" })
+        toast({ title: "Staff actualizado" })
       } else {
         await addDoc(collection(db, "staff_members"), { ...staffData, createdAt: serverTimestamp(), activeSession: null })
         toast({ title: "Staff registrado" })
       }
       resetStaffForm()
     } catch (e) {
-      toast({ title: "Error", variant: "destructive" })
+      toast({ title: "Error al guardar staff", variant: "destructive" })
     }
   }
 
@@ -213,7 +208,7 @@ export default function AdminPage() {
         "activeSession.pauseStartTime": null,
         "activeSession.totalPausedMinutes": currentTotalPaused + pausedMins
       })
-      toast({ title: "De vuelta al trabajo" })
+      toast({ title: "Turno reanudado" })
     }
   }
 
@@ -239,19 +234,18 @@ export default function AdminPage() {
       pausedMinutes: pausedMins
     })
     await updateDoc(doc(db, "staff_members", staffProfile.id), { activeSession: null })
-    toast({ title: "Turno finalizado" })
+    toast({ title: "Turno guardado" })
   }
 
   const getStaffStats = (staffId: string) => {
     const ratings = allRatings?.filter(r => r.staffId === staffId) || []
     const avg = ratings.length ? (ratings.reduce((a, b) => a + b.score, 0) / ratings.length).toFixed(1) : "N/A"
-    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
-    const mins = allLogs?.filter(l => l.staffId === staffId && new Date(l.startTime) > weekAgo)
+    const mins = allLogs?.filter(l => l.staffId === staffId)
       .reduce((a, b) => a + (b.durationMinutes || 0), 0) || 0
     return { avg, time: `${Math.floor(mins/60)}h ${mins%60}m` }
   }
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-[#120108] text-[#FF008A] font-bold">CONECTANDO...</div>
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-[#120108] text-[#FF008A] font-bold">CARGANDO...</div>
 
   if (!user || (!isActualAdmin && !staffProfile)) {
     return (
@@ -259,15 +253,15 @@ export default function AdminPage() {
         <Card className="w-full max-w-md bg-[#1a020c] border-[#FF008A]/30 text-white">
           <CardHeader className="text-center">
             <ShieldCheck className="w-12 h-12 text-[#FF008A] mx-auto mb-4" />
-            <CardTitle className="text-2xl font-headline uppercase tracking-tighter">Acceso Personal</CardTitle>
+            <CardTitle className="text-2xl font-headline uppercase tracking-tighter">Panel de Staff</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 text-center">
-            <p className="text-sm text-[#B0B0B0]">Debes estar registrado por un administrador.</p>
+            <p className="text-sm text-[#B0B0B0]">Acceso restringido a personal autorizado.</p>
             {!user ? (
               <Button onClick={handleLogin} className="bg-[#FF008A] h-14 font-bold text-lg neon-glow-magenta w-full">Entrar con Google</Button>
             ) : (
               <div className="space-y-4">
-                <p className="text-red-400 text-xs font-bold">Sin permisos: {user.email}</p>
+                <p className="text-red-400 text-xs font-bold">Usuario sin acceso: {user.email}</p>
                 <Button onClick={() => signOut(auth)} variant="outline" className="w-full">Cerrar Sesión</Button>
               </div>
             )}
@@ -277,27 +271,13 @@ export default function AdminPage() {
                 <AlertTriangle className="w-4 h-4" /> Solución al Error "Welcome"
               </p>
               <div className="space-y-3 text-[10px] text-white/70 leading-relaxed">
-                <p>Si al entrar a tu URL de Firebase ves una pantalla de "Welcome" azul/gris:</p>
+                <p>Si ves una pantalla azul de Firebase al entrar a tu link:</p>
                 <ol className="list-decimal pl-4 space-y-2">
-                  <li>Es porque estás entrando a <b>Firebase Hosting</b> (estático).</li>
-                  <li>Para NextJS, Mr. Smith usa <b>Firebase App Hosting</b> (dinámico).</li>
-                  <li>Ve a la Consola de Firebase &gt; <b>App Hosting</b> y busca el enlace que termina en <span className="text-[#00F0FF]">.apphosting.run</span>.</li>
-                  <li>Ese es el enlace real que debes usar para el QR.</li>
+                  <li>Es porque estás usando el Hosting gratuito ( Spark ).</li>
+                  <li>Para solucionarlo, usa el link de <b>Workstation</b> que termina en <span className="text-[#00F0FF]">.google.com</span>.</li>
+                  <li>Copia ese link, pégalo en el botón de QR de la página principal y dale ese QR a tus clientes.</li>
+                  <li>¡Asegúrate de tener la Workstation encendida!</li>
                 </ol>
-              </div>
-            </div>
-
-            <div className="mt-4 p-4 bg-[#00F0FF]/5 rounded-xl text-left border border-[#00F0FF]/20">
-              <p className="text-[10px] font-bold text-[#00F0FF] uppercase mb-2 flex items-center gap-2">
-                <Globe className="w-3 h-3" /> Autorizar Dominio
-              </p>
-              <p className="text-[10px] text-white/60 mb-2 leading-tight">Si el login falla, añade este dominio en Firebase Auth:</p>
-              <div className="flex gap-2 items-center bg-black/40 p-2 rounded border border-white/10">
-                <code className="text-[9px] flex-1 truncate text-white">{typeof window !== 'undefined' ? window.location.hostname : ''}</code>
-                <Button size="icon" variant="ghost" className="h-6 w-6 text-[#00F0FF]" onClick={() => {
-                  navigator.clipboard.writeText(window.location.hostname)
-                  toast({ title: "Copiado" })
-                }}><Copy className="w-3 h-3" /></Button>
               </div>
             </div>
           </CardContent>
@@ -308,7 +288,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#120108] text-white p-5 pb-32 max-w-5xl mx-auto font-body">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-[#1a020c] p-4 rounded-2xl border border-white/5 shadow-2xl">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-[#1a020c] p-4 rounded-2xl border border-white/5">
         <div className="flex items-center gap-3">
           <div className="bg-[#FF008A]/20 p-2 rounded-full border border-[#FF008A]/40">
             {isActualOwner ? <ShieldCheck className="w-6 h-6 text-[#00F0FF]" /> : <UserCircle className="w-6 h-6 text-[#FF008A]" />}
@@ -320,34 +300,10 @@ export default function AdminPage() {
             <p className="text-[10px] text-[#B0B0B0] font-bold">{user.email}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Button onClick={() => signOut(auth)} size="sm" variant="ghost" className="rounded-full hover:bg-white/5 text-white/60"><LogOut className="w-4 h-4 mr-2" /> Salir</Button>
-        </div>
+        <Button onClick={() => signOut(auth)} size="sm" variant="ghost" className="rounded-full text-white/60"><LogOut className="w-4 h-4 mr-2" /> Salir</Button>
       </header>
 
-      {/* SECCION DE PUBLICACION (SOLO DUEÑO) */}
-      {isActualOwner && (
-        <Card className="bg-[#1a020c] border-[#00F0FF]/30 mb-8 border-dashed shadow-[0_0_20px_rgba(0,240,255,0.05)]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-headline uppercase text-[#00F0FF] flex items-center gap-2">
-              <Rocket className="w-5 h-5" /> ¿Cómo ver la Web Real?
-            </CardTitle>
-            <CardDescription className="text-[10px] text-white/50">Si ves el cartel azul de "Welcome", sigue estos pasos:</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2 text-[11px]">
-            <div className="p-3 bg-white/5 rounded-lg border border-white/10 space-y-2">
-              <p className="font-bold text-[#FF008A] uppercase">1. El Enlace Correcto</p>
-              <p className="leading-relaxed">No uses el que termina en <span className="text-[#00F0FF]">.web.app</span> si ves el error. Busca en la consola el enlace de <b>App Hosting</b> que termina en <span className="text-[#00F0FF]">.run.app</span> o <span className="text-[#00F0FF]">.apphosting.run</span>.</p>
-            </div>
-            <div className="p-3 bg-white/5 rounded-lg border border-white/10 space-y-2">
-              <p className="font-bold text-[#FF008A] uppercase">2. Configura el QR</p>
-              <p className="leading-relaxed">Esa URL de App Hosting es la que debes poner en el botón de QR de la página principal para que tus clientes entren directo al menú.</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* SECCION DE CONTADOR / RELOJ */}
+      {/* RELOJ DE JORNADA */}
       {staffProfile && (
         <Card className="bg-[#1a020c] border-[#00F0FF]/30 mb-8 neon-glow-cyan">
           <CardHeader className="pb-2">
@@ -361,31 +317,23 @@ export default function AdminPage() {
                 <p className="text-[10px] uppercase text-[#B0B0B0] font-bold mb-1">Tiempo Transcurrido</p>
                 <p className="text-4xl font-headline font-bold tracking-widest text-white">{elapsedTime}</p>
                 {staffProfile.activeSession?.status === "paused" && (
-                  <p className="text-[10px] text-yellow-500 font-bold uppercase animate-pulse mt-1">⏸ En Descanso (Pausado)</p>
+                  <p className="text-[10px] text-yellow-500 font-bold uppercase animate-pulse mt-1">⏸ Pausado</p>
                 )}
               </div>
               
               <div className="flex gap-3 w-full sm:w-auto">
                 {!staffProfile.activeSession ? (
-                  <Button onClick={handleStartWork} className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 h-16 px-8 font-bold text-lg uppercase shadow-lg">
-                    <Play className="w-6 h-6 mr-2" /> Iniciar Turno
+                  <Button onClick={handleStartWork} className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 h-16 px-8 font-bold text-lg uppercase">
+                    <Play className="w-6 h-6 mr-2" /> Iniciar
                   </Button>
                 ) : (
                   <>
-                    <Button 
-                      onClick={handlePauseWork} 
-                      variant="outline" 
-                      className="flex-1 sm:flex-none border-yellow-500 text-yellow-500 h-16 px-6 font-bold uppercase hover:bg-yellow-500/10"
-                    >
+                    <Button onClick={handlePauseWork} variant="outline" className="flex-1 sm:flex-none border-yellow-500 text-yellow-500 h-16 px-6 font-bold uppercase">
                       {staffProfile.activeSession.status === 'paused' ? <Play className="w-5 h-5 mr-2" /> : <Pause className="w-5 h-5 mr-2" />}
                       {staffProfile.activeSession.status === 'paused' ? 'Reanudar' : 'Pausar'}
                     </Button>
-                    <Button 
-                      onClick={handleFinishWork} 
-                      variant="destructive" 
-                      className="flex-1 sm:flex-none h-16 px-6 font-bold uppercase"
-                    >
-                      <Square className="w-5 h-5 mr-2" /> Finalizar
+                    <Button onClick={handleFinishWork} variant="destructive" className="flex-1 sm:flex-none h-16 px-6 font-bold uppercase">
+                      <Square className="w-5 h-5 mr-2" /> Terminar
                     </Button>
                   </>
                 )}
@@ -396,39 +344,34 @@ export default function AdminPage() {
       )}
 
       <Tabs defaultValue="menu">
-        <TabsList className="grid grid-cols-3 h-auto w-full bg-[#1a020c] mb-6 p-1 border border-white/5 gap-1">
-          <TabsTrigger value="menu" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-[#FF008A]">Menú Digital</TabsTrigger>
-          <TabsTrigger value="staff" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-[#00F0FF] data-[state=active]:text-[#120108]">Gestión Staff</TabsTrigger>
-          {isActualOwner && <TabsTrigger value="roles" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-purple-600">Config Niveles</TabsTrigger>}
+        <TabsList className="grid grid-cols-3 h-auto w-full bg-[#1a020c] mb-6 p-1 border border-white/5">
+          <TabsTrigger value="menu" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-[#FF008A]">Menú</TabsTrigger>
+          <TabsTrigger value="staff" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-[#00F0FF] data-[state=active]:text-[#120108]">Personal</TabsTrigger>
+          {isActualOwner && <TabsTrigger value="roles" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-purple-600">Roles</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="menu" className="space-y-6">
           <Card className="bg-[#1a020c] border-[#FF008A]/30">
-            <CardHeader>
-              <CardTitle className="text-lg font-headline uppercase text-[#FF008A] flex justify-between items-center">
-                {editingId ? 'Editar Producto' : 'Publicar Nuevo Producto'}
-                {editingId && <Button variant="ghost" size="sm" onClick={resetMenuForm} className="text-white/40">Cancelar</Button>}
-              </CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-sm font-headline uppercase text-[#FF008A]">Gestionar Productos</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={handleSaveItem} className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Nombre</Label><Input value={title} onChange={e => setTitle(e.target.value)} required className="bg-white/5 border-white/10" /></div>
-                <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Categoría</Label>
+                <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre</Label><Input value={title} onChange={e => setTitle(e.target.value)} required className="bg-white/5 border-white/10" /></div>
+                <div className="space-y-1"><Label className="text-[10px] uppercase">Categoría</Label>
                   <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
                     <option value="Tragos">Tragos</option><option value="Bebidas c/ Alcohol">Bebidas c/ Alcohol</option><option value="Bebidas s/ Alcohol">Bebidas s/ Alcohol</option><option value="Comidas">Comidas</option><option value="Fichas">Fichas</option>
                   </select>
                 </div>
-                <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Precio ($)</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="bg-white/5 border-white/10" /></div>
+                <div className="space-y-1"><Label className="text-[10px] uppercase">Precio ($)</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="bg-white/5 border-white/10" /></div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase text-[#B0B0B0]">Foto del Producto</Label>
+                  <Label className="text-[10px] uppercase">Imagen (Archivo o Link)</Label>
                   <div className="flex gap-2">
                     <Input value={imageUrl.startsWith('data:') ? "Foto cargada" : imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." className="bg-white/5 border-white/10" />
                     <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} className="shrink-0 border-[#00F0FF]/30 text-[#00F0FF]"><Upload className="w-4 h-4" /></Button>
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                   </div>
                 </div>
-                <div className="md:col-span-2 space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Descripción Corta</Label><Input value={description} onChange={e => setDescription(e.target.value)} className="bg-white/5 border-white/10" /></div>
-                <Button type="submit" className="md:col-span-2 bg-[#FF008A] hover:bg-[#FF008A]/80 font-bold uppercase py-6 neon-glow-magenta">
+                <div className="md:col-span-2 space-y-1"><Label className="text-[10px] uppercase">Descripción</Label><Input value={description} onChange={e => setDescription(e.target.value)} className="bg-white/5 border-white/10" /></div>
+                <Button type="submit" className="md:col-span-2 bg-[#FF008A] hover:bg-[#FF008A]/80 font-bold uppercase py-6">
                   {editingId ? 'Actualizar Producto' : 'Añadir al Menú'}
                 </Button>
               </form>
@@ -437,7 +380,7 @@ export default function AdminPage() {
 
           <div className="grid gap-3">
             {menuItems.map(item => (
-              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5 transition-all hover:bg-white/5">
+              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5">
                 <div className="flex items-center gap-4">
                   <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-white/10">
                     <Image src={item.imageUrl} alt="" fill className="object-cover" />
@@ -449,7 +392,7 @@ export default function AdminPage() {
                 </div>
                 <div className="flex gap-1">
                   <Button onClick={() => { setEditingId(item.id); setTitle(item.title); setCategory(item.category); setPrice(item.price.toString()); setDescription(item.description); setImageUrl(item.imageUrl); }} variant="ghost" size="icon" className="h-9 w-9 text-white/40 hover:text-[#00F0FF]"><Edit2 className="w-4 h-4" /></Button>
-                  {isActualAdmin && <Button onClick={async () => { if(confirm(`¿Eliminar ${item.title}?`)) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="h-9 w-9 text-white/40 hover:text-red-500"><Trash2 className="w-4 h-4" /></Button>}
+                  {isActualAdmin && <Button onClick={async () => { if(confirm('¿Eliminar?')) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="h-9 w-9 text-white/40 hover:text-red-500"><Trash2 className="w-4 h-4" /></Button>}
                 </div>
               </div>
             ))}
@@ -459,20 +402,20 @@ export default function AdminPage() {
         <TabsContent value="staff" className="space-y-6">
           {isActualAdmin && (
             <Card className="bg-[#1a020c] border-[#00F0FF]/30">
-              <CardHeader><CardTitle className="text-lg font-headline uppercase text-[#00F0FF]">{editingStaffId ? 'Editar Miembro del Staff' : 'Registrar Nuevo Staff'}</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-sm font-headline uppercase text-[#00F0FF]">Gestión de Personal</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleSaveStaff} className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Nombre Completo</Label><Input value={staffName} onChange={e => setStaffName(e.target.value)} required className="bg-white/5 border-white/10" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Email de Google</Label><Input value={staffEmail} onChange={e => setStaffEmail(e.target.value)} required className="bg-white/5 border-white/10" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Rango / Nivel</Label>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre</Label><Input value={staffName} onChange={e => setStaffName(e.target.value)} required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Email Google</Label><Input value={staffEmail} onChange={e => setStaffEmail(e.target.value)} required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Rango</Label>
                     <select value={staffRole} onChange={e => setStaffRole(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
                       <option value="Bartender">Bartender</option><option value="Mesero">Mesero</option><option value="Gerente">Gerente</option>
                       {isActualOwner && <option value="Dueño">Dueño</option>}
                       {customRoles?.map(r => <option key={r.id} value={r.name}>{r.name}</option>)}
                     </select>
                   </div>
-                  <Button type="submit" className="md:col-span-3 bg-[#00F0FF] text-[#120108] font-bold uppercase py-6 neon-glow-cyan">
-                    {editingStaffId ? 'Guardar Cambios' : 'Dar de Alta al Staff'}
+                  <Button type="submit" className="md:col-span-3 bg-[#00F0FF] text-[#120108] font-bold uppercase py-6">
+                    {editingStaffId ? 'Guardar Cambios' : 'Registrar Nuevo Staff'}
                   </Button>
                 </form>
               </CardContent>
@@ -484,7 +427,7 @@ export default function AdminPage() {
               const { avg, time } = getStaffStats(staff.id)
               const session = staff.activeSession
               return (
-                <Card key={staff.id} className="bg-[#1a020c] border-white/5 overflow-hidden group">
+                <Card key={staff.id} className="bg-[#1a020c] border-white/5">
                   <CardContent className="pt-5">
                     <div className="flex justify-between items-start mb-4">
                       <div>
@@ -492,20 +435,20 @@ export default function AdminPage() {
                           <p className="font-bold text-white">{staff.name}</p>
                           {isActualAdmin && <button onClick={() => { setEditingStaffId(staff.id); setStaffName(staff.name); setStaffEmail(staff.email); setStaffRole(staff.role); }} className="text-white/20 hover:text-[#00F0FF]"><Edit2 className="w-3.5 h-3.5" /></button>}
                         </div>
-                        <p className="text-[9px] font-bold text-[#FF008A] uppercase tracking-wider">{staff.role}</p>
+                        <p className="text-[9px] font-bold text-[#FF008A] uppercase">{staff.role}</p>
                       </div>
                       <div className="flex flex-col items-end">
                         <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold"><Star className="w-3.5 h-3.5 fill-current" /> {avg}</div>
                         {session && (
                           <div className={`text-[8px] ${session.status === 'paused' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'} px-2 py-0.5 rounded-full mt-1 font-bold`}>
-                            {session.status === 'paused' ? 'EN PAUSA' : 'EN TURNO'}
+                            {session.status === 'paused' ? 'PAUSADO' : 'ACTIVO'}
                           </div>
                         )}
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-4">
-                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0] font-bold">Tiempo Semana</p><p className="font-headline font-bold text-[#FF008A] text-sm">{time}</p></div>
-                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0] font-bold">Reseñas Clientes</p><p className="font-headline font-bold text-[#00F0FF] text-sm">{allRatings?.filter(r => r.staffId === staff.id).length || 0}</p></div>
+                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0]">Total Semanal</p><p className="font-bold text-[#FF008A] text-sm">{time}</p></div>
+                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0]">Calificaciones</p><p className="font-bold text-[#00F0FF] text-sm">{allRatings?.filter(r => r.staffId === staff.id).length || 0}</p></div>
                     </div>
                   </CardContent>
                 </Card>
@@ -517,13 +460,13 @@ export default function AdminPage() {
         {isActualOwner && (
           <TabsContent value="roles" className="space-y-6">
             <Card className="bg-[#1a020c] border-purple-600/30">
-              <CardHeader><CardTitle className="text-lg font-headline uppercase text-purple-600">Crear Rangos del Bar</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-sm font-headline uppercase text-purple-600">Niveles Personalizados</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleCreateRole} className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase text-white/50">Nombre del Puesto</Label><Input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} placeholder="Ej: DJ, Seguridad" required className="bg-white/5 border-white/10" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase text-white/50">Nivel de Acceso</Label>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre del Puesto</Label><Input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} placeholder="Ej: DJ, Seguridad" required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nivel de Acceso</Label>
                     <select value={newRoleLevel} onChange={e => setNewRoleLevel(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
-                      <option value="Staff">Personal (Solo Reloj)</option><option value="Gerente">Gerencia (Editar Menú)</option><option value="Dueño">Dueño (Control Total)</option>
+                      <option value="Staff">Solo Reloj</option><option value="Gerente">Editar Menú</option><option value="Dueño">Dueño Total</option>
                     </select>
                   </div>
                   <Button type="submit" className="md:col-span-2 bg-purple-600 hover:bg-purple-700 font-bold uppercase shadow-lg"><Plus className="w-4 h-4 mr-2" /> Guardar Rango</Button>
@@ -538,7 +481,7 @@ export default function AdminPage() {
                     <p className="font-bold text-white">{role.name}</p>
                     <p className="text-[10px] text-purple-400 font-bold uppercase">{role.level}</p>
                   </div>
-                  <Button onClick={async () => { if(confirm(`¿Eliminar rango ${role.name}?`)) await deleteDoc(doc(db!, "custom_roles", role.id)) }} variant="ghost" size="icon" className="text-white/20 hover:text-red-500"><Trash2 className="w-4 h-4" /></Button>
+                  <Button onClick={async () => { if(confirm('¿Eliminar?')) await deleteDoc(doc(db!, "custom_roles", role.id)) }} variant="ghost" size="icon" className="text-white/20 hover:text-red-500"><Trash2 className="w-4 h-4" /></Button>
                 </div>
               ))}
             </div>
@@ -548,5 +491,3 @@ export default function AdminPage() {
     </div>
   )
 }
-
-    

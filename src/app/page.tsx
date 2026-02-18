@@ -17,12 +17,11 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { QrCode, Settings, Loader2, AlertCircle, Info, ExternalLink, Globe } from "lucide-react"
+import { QrCode, Settings, Loader2, Info, AlertCircle, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 
-// Menú Digital Mr. Smith - Mejor Bar Pool de la Costa
 const CATEGORIES = ["Todos", "Tragos", "Bebidas c/ Alcohol", "Bebidas s/ Alcohol", "Comidas", "Fichas"]
 
 export default function Home() {
@@ -61,8 +60,6 @@ export default function Home() {
     ? menuItems 
     : menuItems.filter(item => item.category === activeCategory)
 
-  const isDevUrl = publicUrl.includes("workstations.google.com")
-
   return (
     <div className="min-h-screen pb-32 bg-[#120108]">
       <header className="px-5 pt-10 pb-6 flex justify-between items-start max-w-4xl mx-auto">
@@ -89,8 +86,8 @@ export default function Home() {
             </DialogTrigger>
             <DialogContent className="bg-[#1a020c] border-[#FF008A]/30 text-white max-w-[350px] rounded-3xl p-6">
               <DialogHeader>
-                <DialogTitle className="text-center font-headline text-xl text-[#FF008A] uppercase tracking-widest">Compartir Menú</DialogTitle>
-                <DialogDescription className="text-center text-[10px] text-white/50 uppercase font-bold tracking-tight">Crea el QR para tus mesas</DialogDescription>
+                <DialogTitle className="text-center font-headline text-xl text-[#FF008A] uppercase tracking-widest">Código QR Mesas</DialogTitle>
+                <DialogDescription className="text-center text-[10px] text-white/50 uppercase font-bold tracking-tight">Crea el acceso para tus clientes</DialogDescription>
               </DialogHeader>
               <div className="flex flex-col items-center gap-4 py-4">
                 <div className="bg-white p-4 rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
@@ -100,25 +97,19 @@ export default function Home() {
                 <div className="w-full space-y-3">
                   <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
                     <p className="text-[10px] text-blue-400 font-bold flex items-center gap-1 uppercase mb-2">
-                      <Globe className="w-3 h-3" /> URL del Menú (Hosting)
+                      <Globe className="w-3 h-3" /> Link del Menú
                     </p>
                     <Input 
                       value={publicUrl} 
                       onChange={(e) => setPublicUrl(e.target.value)} 
-                      placeholder="https://mrsmith.web.app" 
+                      placeholder="Pega aquí tu link de Workstation" 
                       className="h-9 text-[11px] bg-black/40 border-white/20 text-white font-mono"
                     />
-                    {isDevUrl && (
-                      <p className="text-[9px] text-yellow-500 mt-2 leading-tight flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> Esta es tu URL privada de trabajo. Usa la de App Hosting para el bar.
-                      </p>
-                    )}
+                    <p className="text-[9px] text-yellow-500 mt-2 leading-tight flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Como usas el plan gratuito, pega aquí tu link de <b>Workstation</b> para que el QR funcione.
+                    </p>
                   </div>
                 </div>
-                
-                <p className="text-center text-[10px] text-[#B0B0B0] px-2 flex items-center gap-2">
-                  <Info className="w-3 h-3 text-[#00F0FF]" /> Escanea para entrar al mejor bar pool.
-                </p>
               </div>
             </DialogContent>
           </Dialog>
@@ -136,11 +127,6 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-2 gap-4">
             {filteredItems.map((item) => <MenuCard key={item.id} {...item} />)}
-            {filteredItems.length === 0 && (
-              <div className="col-span-2 py-20 text-center">
-                <p className="text-white/20 italic uppercase font-bold text-xs tracking-widest">Aún no hay ítems en esta categoría</p>
-              </div>
-            )}
           </div>
         )}
       </main>
