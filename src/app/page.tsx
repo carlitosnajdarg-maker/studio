@@ -1,110 +1,86 @@
+
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CategoryNav } from "@/components/menu/CategoryNav"
 import { MenuCard, MenuItemProps } from "@/components/menu/MenuCard"
 import { QuickActions } from "@/components/menu/QuickActions"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
-
-const MENU_DATA: MenuItemProps[] = [
-  // Drinks
-  {
-    id: "d1",
-    title: "Mojito Ultravioleta",
-    category: "Tragos",
-    description: "Ron blanco, menta fresca, lima, azúcar de caña y un toque de flor de butterfly pea.",
-    price: 9500,
-    imageUrl: PlaceHolderImages.find(img => img.id === 'cocktail-2')?.imageUrl || "",
-    metadata: "Sugerencia del chef",
-    isAlcoholic: true
-  },
-  {
-    id: "d2",
-    title: "Electric Gin & Tonic",
-    category: "Tragos",
-    description: "Gin premium, tónica premium, bayas de enebro y una rodaja de pepino neón.",
-    price: 12000,
-    imageUrl: PlaceHolderImages.find(img => img.id === 'cocktail-1')?.imageUrl || "",
-    metadata: "Más Vendido",
-    isAlcoholic: true
-  },
-  {
-    id: "d3",
-    title: "Cerveza Artesanal IPA",
-    category: "Bebidas c/ Alcohol",
-    description: "Intensa, cítrica y con un amargor balanceado. 6.5% ABV.",
-    price: 6500,
-    imageUrl: PlaceHolderImages.find(img => img.id === 'beer-1')?.imageUrl || "",
-    metadata: "Cerveza Local",
-    isAlcoholic: true
-  },
-  {
-    id: "d4",
-    title: "Limonada de Menta y Jengibre",
-    category: "Bebidas s/ Alcohol",
-    description: "Refrescante combinación natural servida con hielo frappé.",
-    price: 4500,
-    imageUrl: PlaceHolderImages.find(img => img.id === 'cocktail-1')?.imageUrl || "",
-    isAlcoholic: false
-  },
-  // Food
-  {
-    id: "f1",
-    title: "Panchos Mr. Smith",
-    category: "Comidas",
-    description: "Salchicha premium, pan artesanal, lluvia de papas pay y nuestra salsa secreta magenta.",
-    price: 8500,
-    imageUrl: PlaceHolderImages.find(img => img.id === 'food-1')?.imageUrl || "",
-    metadata: "Clásico del Bar",
-  },
-  {
-    id: "f2",
-    title: "Maní Salado",
-    category: "Comidas",
-    description: "El acompañamiento perfecto para tu cerveza. Siempre fresco y crujiente.",
-    price: 3500,
-    imageUrl: PlaceHolderImages.find(img => img.id === 'food-2')?.imageUrl || "",
-  },
-  // Tokens
-  {
-    id: "t1",
-    title: "Ficha de Juego Premium",
-    category: "Fichas",
-    description: "Acceso a 1 hora de mesa de pool profesional con equipo incluido.",
-    price: 10000,
-    imageUrl: PlaceHolderImages.find(img => img.id === 'billiards-1')?.imageUrl || "",
-    metadata: "Reserva prioritaria",
-  },
-  {
-    id: "t2",
-    title: "Pack VIP 5 Fichas",
-    category: "Fichas",
-    description: "Ahorra con nuestro pack de 5 fichas para una noche completa de juego.",
-    price: 40000,
-    imageUrl: PlaceHolderImages.find(img => img.id === 'billiards-1')?.imageUrl || "",
-    metadata: "Ahorra 20%",
-  }
-]
+import { db } from "@/lib/firebase"
+import { collection, onSnapshot, query } from "firebase/firestore"
+import { QRCodeSVG } from "qrcode.react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { QrCode } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const CATEGORIES = ["Todos", "Tragos", "Bebidas c/ Alcohol", "Bebidas s/ Alcohol", "Comidas", "Fichas"]
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Todos")
+  const [menuItems, setMenuItems] = useState<MenuItemProps[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const q = query(collection(db, "menu"))
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const items: any[] = []
+      querySnapshot.forEach((doc) => {
+        items.push({ id: doc.id, ...doc.data() })
+      })
+      
+      // Si está vacío, podríamos cargar los iniciales (opcional)
+      setMenuItems(items)
+      setLoading(false)
+    })
+    return () => unsubscribe()
+  }, [])
 
   const filteredItems = activeCategory === "Todos" 
-    ? MENU_DATA 
-    : MENU_DATA.filter(item => item.category === activeCategory)
+    ? menuItems 
+    : menuItems.filter(item => item.category === activeCategory)
+
+  // URL para el QR
+  const [currentUrl, setCurrentUrl] = useState("")
+  useEffect(() => {
+    setCurrentUrl(window.location.href)
+  }, [])
 
   return (
     <div className="min-h-screen pb-32">
       {/* Header */}
-      <header className="px-5 pt-10 pb-6">
+      <header className="px-5 pt-10 pb-6 flex justify-between items-start">
         <div className="flex flex-col gap-1">
           <p className="text-[#00F0FF] text-xs font-bold uppercase tracking-widest">Bienvenido a</p>
           <h1 className="text-4xl font-headline font-bold uppercase leading-tight text-[#FF008A]">Mr. Smith</h1>
           <h2 className="text-2xl font-headline font-bold uppercase tracking-tighter text-[#00F0FF] -mt-1">Bar Pool</h2>
           <p className="text-[#B0B0B0] mt-2 max-w-[280px]">Disfruta del mejor pool en un ambiente eléctrico y futurista.</p>
         </div>
+        
+        {/* QR Access Dialog */}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button size="icon" variant="ghost" className="text-[#FF008A] hover:bg-[#FF008A]/10 mt-1">
+              <QrCode className="w-8 h-8" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-[#1a020c] border-[#FF008A]/30 text-white max-w-xs rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-center font-headline text-xl text-[#FF008A]">Comparte el Menú</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="bg-white p-4 rounded-xl">
+                <QRCodeSVG value={currentUrl} size={200} />
+              </div>
+              <p className="text-center text-sm text-[#B0B0B0]">Escanea este código para acceder al menú digital de Mr. Smith.</p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </header>
 
       {/* Navigation */}
@@ -116,13 +92,19 @@ export default function Home() {
 
       {/* Grid Layout */}
       <main className="px-5 mt-6">
-        <div className="grid grid-cols-2 gap-4">
-          {filteredItems.map((item) => (
-            <MenuCard key={item.id} {...item} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="py-20 text-center">
+            <p className="text-[#FF008A] animate-pulse">Cargando menú eléctrico...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {filteredItems.map((item) => (
+              <MenuCard key={item.id} {...item} />
+            ))}
+          </div>
+        )}
 
-        {filteredItems.length === 0 && (
+        {!loading && filteredItems.length === 0 && (
           <div className="py-20 text-center">
             <p className="text-[#B0B0B0]">No hay ítems en esta categoría todavía.</p>
           </div>
@@ -134,7 +116,7 @@ export default function Home() {
 
       {/* Footer Branding */}
       <footer className="mt-12 mb-20 text-center opacity-20">
-        <p className="font-headline uppercase tracking-tighter text-sm">Mr. Smith Electric Neon v1.1</p>
+        <p className="font-headline uppercase tracking-tighter text-sm">Mr. Smith Electric Neon v2.0 Admin Enabled</p>
       </footer>
     </div>
   )
