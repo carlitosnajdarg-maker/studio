@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp, where, getDocs } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, Clock, Star, Users, Beer, Utensils, Coins, Image as ImageIcon, UserCircle, Edit2, CheckCircle2, Upload } from "lucide-react"
+import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, Clock, Star, Users, Beer, Utensils, Coins, Image as ImageIcon, UserCircle, Edit2, CheckCircle2, Upload, Loader2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -26,6 +26,7 @@ export default function AdminPage() {
   const [menuItems, setMenuItems] = useState<any[]>([])
   const [hostname, setHostname] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null)
   
   // Menu Form states
   const [title, setTitle] = useState("")
@@ -40,7 +41,7 @@ export default function AdminPage() {
   const [staffRole, setStaffRole] = useState("Bartender")
 
   // Queries
-  const staffQuery = useMemoFirebase(() => query(collection(db, "staff_members")), [db])
+  const staffQuery = useMemoFirebase(() => query(collection(db, "staff_members"), orderBy("name", "asc")), [db])
   const { data: staffList } = useCollection(staffQuery)
 
   const ratingsQuery = useMemoFirebase(() => query(collection(db, "ratings")), [db])
@@ -80,7 +81,7 @@ export default function AdminPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      if (file.size > 800000) { // Límite de ~800KB para Firestore Base64
+      if (file.size > 800000) {
         toast({ title: "Archivo muy pesado", description: "Por favor usa una imagen de menos de 800KB.", variant: "destructive" })
         return
       }
@@ -100,6 +101,14 @@ export default function AdminPage() {
     setPrice(item.price.toString())
     setDescription(item.description)
     setImageUrl(item.imageUrl)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleEditStaff = (staff: any) => {
+    setEditingStaffId(staff.id)
+    setStaffName(staff.name)
+    setStaffEmail(staff.email)
+    setStaffRole(staff.role)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -125,30 +134,49 @@ export default function AdminPage() {
         toast({ title: "Producto añadido", description: `${title} ya está en el menú.` })
       }
       
-      resetForm()
+      resetMenuForm()
     } catch (e) {
       toast({ title: "Error", description: "No tienes permiso para realizar esta acción.", variant: "destructive" })
     }
   }
 
-  const resetForm = () => {
+  const resetMenuForm = () => {
     setEditingId(null)
     setTitle(""); setPrice(""); setDescription(""); setImageUrl("")
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  const handleAddStaff = async (e: React.FormEvent) => {
+  const handleSaveStaff = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!db || !isActualAdmin) return
     try {
-      await addDoc(collection(db, "staff_members"), {
-        name: staffName, email: staffEmail.toLowerCase(), role: staffRole, createdAt: serverTimestamp()
-      })
-      setStaffName(""); setStaffEmail("")
-      toast({ title: "Personal registrado", description: `${staffName} ha sido añadido como ${staffRole}.` })
+      const staffData = {
+        name: staffName, 
+        email: staffEmail.toLowerCase(), 
+        role: staffRole, 
+        updatedAt: serverTimestamp()
+      }
+
+      if (editingStaffId) {
+        await updateDoc(doc(db, "staff_members", editingStaffId), staffData)
+        toast({ title: "Personal actualizado", description: `${staffName} ha sido modificado.` })
+      } else {
+        await addDoc(collection(db, "staff_members"), {
+          ...staffData,
+          createdAt: serverTimestamp()
+        })
+        toast({ title: "Personal registrado", description: `${staffName} ha sido añadido como ${staffRole}.` })
+      }
+      
+      resetStaffForm()
     } catch (e) {
-      toast({ title: "Error", description: "Error al registrar personal.", variant: "destructive" })
+      toast({ title: "Error", description: "Error al gestionar personal.", variant: "destructive" })
     }
+  }
+
+  const resetStaffForm = () => {
+    setEditingStaffId(null)
+    setStaffName(""); setStaffEmail(""); setStaffRole("Bartender")
   }
 
   const handleClockToggle = async () => {
@@ -262,7 +290,7 @@ export default function AdminPage() {
                   {editingId ? <Edit2 className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
                   {editingId ? 'Editar Producto' : 'Nuevo Producto'}
                 </span>
-                {editingId && <Button variant="ghost" size="sm" onClick={resetForm} className="text-white/40 hover:text-white">Cancelar</Button>}
+                {editingId && <Button variant="ghost" size="sm" onClick={resetMenuForm} className="text-white/40 hover:text-white">Cancelar</Button>}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -328,10 +356,18 @@ export default function AdminPage() {
 
         <TabsContent value="staff" className="space-y-8">
           {isActualAdmin && (
-            <Card className={`bg-[#1a020c] border-2 shadow-xl ${isActualOwner ? 'border-[#00F0FF]/30' : 'border-white/10'}`}>
-              <CardHeader><CardTitle className="text-[#00F0FF] flex items-center gap-2 font-headline text-xl uppercase"><Users className="w-6 h-6" /> Gestión de Personal</CardTitle></CardHeader>
+            <Card className={`bg-[#1a020c] border-2 shadow-xl ${editingStaffId ? 'border-[#00F0FF]/50' : (isActualOwner ? 'border-[#00F0FF]/30' : 'border-white/10')}`}>
+              <CardHeader>
+                <CardTitle className={`flex items-center justify-between font-headline text-xl uppercase ${editingStaffId ? 'text-[#00F0FF]' : 'text-[#00F0FF]'}`}>
+                  <span className="flex items-center gap-2">
+                    {editingStaffId ? <Edit2 className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+                    {editingStaffId ? 'Editar Miembro' : 'Gestión de Personal'}
+                  </span>
+                  {editingStaffId && <Button variant="ghost" size="sm" onClick={resetStaffForm} className="text-white/40 hover:text-white">Cancelar</Button>}
+                </CardTitle>
+              </CardHeader>
               <CardContent>
-                <form onSubmit={handleAddStaff} className="grid gap-4 md:grid-cols-3">
+                <form onSubmit={handleSaveStaff} className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase text-[#B0B0B0]">Nombre</Label>
                     <Input value={staffName} onChange={(e) => setStaffName(e.target.value)} required placeholder="Nombre completo" className="bg-white/5 h-12" />
@@ -350,7 +386,9 @@ export default function AdminPage() {
                       {isActualOwner && <option value="Gerente">Gerente</option>}
                     </select>
                   </div>
-                  <Button type="submit" className="md:col-span-3 bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#120108] font-bold h-12 uppercase">Registrar Nuevo Miembro</Button>
+                  <Button type="submit" className={`md:col-span-3 font-bold h-12 uppercase ${editingStaffId ? 'bg-[#FF008A] text-white' : 'bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#120108]'}`}>
+                    {editingStaffId ? 'Guardar Cambios' : 'Registrar Nuevo Miembro'}
+                  </Button>
                 </form>
               </CardContent>
             </Card>
@@ -363,11 +401,18 @@ export default function AdminPage() {
               const isStaffAdmin = staff.role === 'Gerente' || ADMIN_WHITELIST.includes(staff.email)
               
               return (
-                <Card key={staff.id} className="bg-[#1a020c] border-white/5 hover:border-[#00F0FF]/20 transition-all">
+                <Card key={staff.id} className="bg-[#1a020c] border-white/5 hover:border-[#00F0FF]/20 transition-all relative">
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <p className="font-bold text-lg">{staff.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-lg">{staff.name}</p>
+                          {isActualAdmin && (
+                            <button onClick={() => handleEditStaff(staff)} className="text-white/20 hover:text-[#00F0FF]">
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                         <p className={`text-[10px] font-bold uppercase tracking-widest ${isStaffOwner ? 'text-[#00F0FF]' : (isStaffAdmin ? 'text-yellow-400' : 'text-[#FF008A]')}`}>
                           {staff.role}
                         </p>
@@ -390,9 +435,9 @@ export default function AdminPage() {
                         </p>
                       </div>
                     </div>
-                    {isActualOwner && !OWNER_WHITELIST.includes(staff.email) && (
+                    {isActualOwner && !OWNER_WHITELIST.includes(staff.email) && staff.email !== user?.email && (
                       <Button 
-                        onClick={async () => { if(confirm("¿Eliminar acceso de este miembro?")) await deleteDoc(doc(db!, "staff_members", staff.id)) }} 
+                        onClick={async () => { if(confirm(`¿Eliminar acceso de ${staff.name}?`)) await deleteDoc(doc(db!, "staff_members", staff.id)) }} 
                         variant="ghost" size="sm" className="w-full mt-4 text-destructive hover:bg-destructive/10">Dar de Baja</Button>
                     )}
                   </CardContent>

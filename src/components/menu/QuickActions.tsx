@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -7,7 +8,8 @@ import {
   Users, 
   X, 
   Star, 
-  Heart 
+  Heart,
+  Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,10 +20,17 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase"
+import { collection, query, addDoc, serverTimestamp, orderBy } from "firebase/firestore"
 
 export function QuickActions() {
+  const db = useFirestore()
   const [activeDialog, setActiveDialog] = useState<"tips" | "staff" | null>(null)
   const { toast } = useToast()
+  
+  // Obtener staff real de Firestore
+  const staffQuery = useMemoFirebase(() => query(collection(db, "staff_members"), orderBy("name", "asc")), [db])
+  const { data: staffList, isLoading: isStaffLoading } = useCollection(staffQuery)
 
   const handleAction = (msg: string) => {
     toast({
@@ -29,6 +38,28 @@ export function QuickActions() {
       description: msg,
     })
     setActiveDialog(null)
+  }
+
+  const handleRateStaff = async (staffId: string, staffName: string, score: number) => {
+    try {
+      await addDoc(collection(db, "ratings"), {
+        staffId,
+        score,
+        createdAt: serverTimestamp(),
+        comment: "Calificación rápida desde menú"
+      })
+      toast({
+        title: "¡Gracias!",
+        description: `Has calificado a ${staffName} con ${score} estrellas.`,
+      })
+      setActiveDialog(null)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo enviar la calificación.",
+        variant: "destructive"
+      })
+    }
   }
 
   return (
@@ -85,40 +116,41 @@ export function QuickActions() {
 
       {/* Staff Ratings Dialog */}
       <Dialog open={activeDialog === "staff"} onOpenChange={(open) => !open && setActiveDialog(null)}>
-        <DialogContent className="bg-[#1a020c] border-[#39FF14]/30 text-white rounded-2xl">
+        <DialogContent className="bg-[#1a020c] border-[#39FF14]/30 text-white rounded-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-[#39FF14] font-headline text-2xl">Calificaciones del Staff</DialogTitle>
             <DialogDescription className="text-[#B0B0B0]">
-              Tu opinión nos ayuda a mejorar.
+              Tu opinión nos ayuda a mejorar nuestro servicio.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {[
-              { name: "Alex R.", role: "Bartender", rating: 4.9 },
-              { name: "Sonia M.", role: "Mesera", rating: 4.8 },
-              { name: "Lucas K.", role: "Seguridad", rating: 4.7 }
-            ].map((staff) => (
-              <div key={staff.name} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                <div>
-                  <p className="font-bold text-white">{staff.name}</p>
-                  <p className="text-xs text-[#00F0FF] uppercase font-bold">{staff.role}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1 text-[#39FF14]">
-                    <Star className="w-4 h-4 fill-[#39FF14]" />
-                    <span className="font-bold">{staff.rating}</span>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="text-white hover:bg-[#FF008A] hover:text-white rounded-full p-2 h-10 w-10"
-                    onClick={() => handleAction(`Gracias por calificar a ${staff.name}`)}
-                  >
-                    <Heart className="w-5 h-5" />
-                  </Button>
-                </div>
+            {isStaffLoading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="w-8 h-8 animate-spin text-[#39FF14]" />
               </div>
-            ))}
+            ) : staffList && staffList.length > 0 ? (
+              staffList.map((staff) => (
+                <div key={staff.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                  <div>
+                    <p className="font-bold text-white">{staff.name}</p>
+                    <p className="text-[10px] text-[#00F0FF] uppercase font-bold tracking-widest">{staff.role}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => handleRateStaff(staff.id, staff.name, star)}
+                        className="text-white/20 hover:text-[#39FF14] transition-colors p-1"
+                      >
+                        <Star className="w-5 h-5 fill-current" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-white/40 italic py-10">No hay personal registrado actualmente.</p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
