@@ -1,243 +1,92 @@
+
 {
   "entities": {
     "Category": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Category",
       "type": "object",
-      "description": "Represents a category for organizing menu items, such as 'Drinks' or 'Food'.",
+      "description": "Categorías para organizar el menú.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the category entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the category (e.g., 'Bebidas con alcohol', 'Comidas')."
-        },
-        "order": {
-          "type": "number",
-          "description": "An optional numerical value to define the display order of categories in the menu."
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "order": { "type": "number" }
       },
-      "required": [
-        "id",
-        "name"
-      ]
+      "required": ["id", "name"]
     },
     "MenuItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "MenuItem",
       "type": "object",
-      "description": "Represents a single item available on the barpool menu, including drinks, food, and tokens.",
+      "description": "Ítems del menú del bar pool.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the menu item entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the menu item."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description or ingredients list for the menu item."
-        },
-        "price": {
-          "type": "number",
-          "description": "The price of the menu item."
-        },
-        "imageUrl": {
-          "type": "string",
-          "description": "URL to an image of the menu item for visual display.",
-          "format": "uri"
-        },
-        "categoryId": {
-          "type": "string",
-          "description": "Reference to the Category this item belongs to. (Relationship: Category 1:N MenuItem)"
-        },
-        "isAlcoholic": {
-          "type": "boolean",
-          "description": "Indicates whether the drink item contains alcohol (true for alcoholic, false for non-alcoholic)."
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "categoryId": { "type": "string" },
+        "description": { "type": "string" }
       },
-      "required": [
-        "id",
-        "name",
-        "price",
-        "categoryId"
-      ]
+      "required": ["id", "name", "price", "categoryId"]
     },
     "Staff": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Staff",
       "type": "object",
-      "description": "Represents an employee of the barpool, allowing for tips and ratings.",
+      "description": "Miembros del personal (moderadores).",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the staff member entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The full name of the staff member."
-        },
-        "role": {
-          "type": "string",
-          "description": "The role or position of the staff member (e.g., 'Bartender', 'Waiter')."
-        },
-        "profileImageUrl": {
-          "type": "string",
-          "description": "Optional URL to a profile image of the staff member.",
-          "format": "uri"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["Bartender", "Mesero", "Seguridad"] },
+        "activeSession": { "type": "object", "description": "Sesión de tiempo activa." }
       },
-      "required": [
-        "id",
-        "name",
-        "role"
-      ]
+      "required": ["id", "name", "email", "role"]
+    },
+    "WorkLog": {
+      "title": "WorkLog",
+      "type": "object",
+      "description": "Registro de horas trabajadas.",
+      "properties": {
+        "id": { "type": "string" },
+        "staffId": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "durationMinutes": { "type": "number" }
+      },
+      "required": ["id", "staffId", "startTime"]
     },
     "Rating": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Rating",
       "type": "object",
-      "description": "Represents a customer's rating given to a specific staff member.",
+      "description": "Calificaciones de clientes al staff.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the rating entity."
-        },
-        "staffId": {
-          "type": "string",
-          "description": "Reference to the Staff member being rated. (Relationship: Staff 1:N Rating)"
-        },
-        "score": {
-          "type": "number",
-          "description": "The numerical rating score provided by the customer (e.g., 1-5)."
-        },
-        "comment": {
-          "type": "string",
-          "description": "An optional text comment provided with the rating."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the rating was created.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "staffId": { "type": "string" },
+        "score": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "staffId",
-        "score",
-        "createdAt"
-      ]
-    },
-    "Tip": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Tip",
-      "type": "object",
-      "description": "Represents a tip amount given by a customer to a staff member.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the tip entity."
-        },
-        "staffId": {
-          "type": "string",
-          "description": "Reference to the Staff member receiving the tip. (Relationship: Staff 1:N Tip)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary amount of the tip."
-        },
-        "currency": {
-          "type": "string",
-          "description": "The currency of the tip (e.g., 'USD', 'EUR')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the tip was given.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "staffId",
-        "amount",
-        "currency",
-        "createdAt"
-      ]
+      "required": ["id", "staffId", "score", "createdAt"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["google", "password"]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/categories/{categoryId}",
-        "definition": {
-          "entityName": "Category",
-          "schema": {
-            "$ref": "#/backend/entities/Category"
-          },
-          "description": "Publicly accessible collection for menu categories. Read-only for general users, writeable by administrators. No specific authorization denormalization needed within documents for general access as it's public data."
-        }
-      },
-      {
-        "path": "/menu_items/{menuItemId}",
-        "definition": {
-          "entityName": "MenuItem",
-          "schema": {
-            "$ref": "#/backend/entities/MenuItem"
-          },
-          "description": "Publicly accessible collection for all menu items. Read-only for general users, writeable by administrators. Includes 'categoryId' for linking to categories. No specific authorization denormalization needed within documents for general access as it's public data."
-        }
+        "path": "/menu/{itemId}",
+        "definition": { "entityName": "MenuItem", "description": "Menú público." }
       },
       {
         "path": "/staff_members/{staffId}",
-        "definition": {
-          "entityName": "Staff",
-          "schema": {
-            "$ref": "#/backend/entities/Staff"
-          },
-          "description": "Publicly accessible collection for staff members. Read-only for general users (for viewing profiles, rating, tipping), writeable by administrators. No specific authorization denormalization needed within documents for general access as it's public data."
-        }
+        "definition": { "entityName": "Staff", "description": "Lista de personal autorizado." }
+      },
+      {
+        "path": "/work_logs/{logId}",
+        "definition": { "entityName": "WorkLog", "description": "Registros de tiempo del staff." }
       },
       {
         "path": "/ratings/{ratingId}",
-        "definition": {
-          "entityName": "Rating",
-          "schema": {
-            "$ref": "#/backend/entities/Rating"
-          },
-          "description": "Collection for customer ratings of staff members. Documents must include a 'userId' field (the ID of the user who submitted the rating) for authorization independence during creation and potential future ownership-based rule checks. Also includes 'staffId' for the rated staff member. Publicly readable, allowing for general viewing and aggregation of staff ratings."
-        }
-      },
-      {
-        "path": "/tips/{tipId}",
-        "definition": {
-          "entityName": "Tip",
-          "schema": {
-            "$ref": "#/backend/entities/Tip"
-          },
-          "description": "Collection for customer tips to staff members. Documents must include a 'userId' field (the ID of the user who gave the tip) for authorization independence during creation, and 'staffId' for the receiving staff member. Readable only by the staff member designated by 'staffId' or by administrators."
-        }
-      },
-      {
-        "path": "/roles_admin/{userId}",
-        "definition": {
-          "entityName": "role_admin",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Admin role collection for Database Access Control (DBAC). The mere existence of a document in this collection with a 'userId' matching 'request.auth.uid' grants administrative privileges. This design provides robust Authorization Independence as rules can check existence directly, avoiding `get()` calls on other data."
-        }
+        "definition": { "entityName": "Rating", "description": "Calificaciones del staff." }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to be secure, scalable, and debuggable by strictly adhering to the core design principles. All collections are top-level to ensure Authorization Independence, eliminating the need for complex and potentially insecure `get()` calls in security rules. Each document that requires specific authorization (e.g., who created it, who owns it) will have the necessary authorization context denormalized directly into its fields. For instance, `ratings` and `tips` documents will explicitly include `userId` (the creator) and `staffId` (the target) fields.\n\nStructural Segregation is applied by having distinct collections for `categories`, `menu_items`, `staff_members`, `ratings`, and `tips`. Each collection has a homogeneous security posture: `categories`, `menu_items`, and `staff_members` are publicly readable, while `ratings` are created by authenticated users and publicly viewable, and `tips` are created by authenticated users but only readable by the specific `staffId` recipient or administrators. This separation simplifies security rules significantly.\n\nQuery as Authorization Primitives (QAPs) are fully supported. For example, displaying the menu involves simple reads from `/categories` and `/menu_items`. Listing ratings for a specific staff member can be done with a query like `db.collection('ratings').where('staffId', '==', staffId)`, and rules will allow this as all public ratings are present directly in the document. Similarly, a staff member can securely query their own tips using `db.collection('tips').where('staffId', '==', request.auth.uid)`, with rules enforcing `request.auth.uid == resource.data.staffId`. Administrative roles are managed via a dedicated `roles_admin/{userId}` collection, using an 'existence check' for robust DBAC."
+    ]
   }
 }

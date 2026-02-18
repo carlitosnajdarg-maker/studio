@@ -1,17 +1,18 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
-import { useAuth, useFirestore, useUser } from "@/firebase"
+import { useState, useEffect, useMemo } from "react"
+import { useAuth, useFirestore, useUser, useMemoFirebase, useCollection } from "@/firebase"
 import { signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth"
-import { isAdmin, isAuthorized, getRole } from "@/lib/admin-config"
+import { isAdmin, isAuthorized, getRole, ADMIN_WHITELIST } from "@/lib/admin-config"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy } from "firebase/firestore"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp, where, getDocs } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, Sparkles, Database, Copy, ExternalLink, Image as ImageIcon, UserCircle } from "lucide-react"
+import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, Clock, Star, Users, Beer, Utensils, Coins, Image as ImageIcon, UserCircle } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -19,273 +20,284 @@ export default function AdminPage() {
   const auth = useAuth()
   const db = useFirestore()
   const { user, isUserLoading } = useUser()
+  const { toast } = useToast()
+  
   const [menuItems, setMenuItems] = useState<any[]>([])
   const [hostname, setHostname] = useState("")
-  const { toast } = useToast()
-
-  // Form states
+  
+  // Menu Form states
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("Tragos")
   const [price, setPrice] = useState("")
   const [description, setDescription] = useState("")
   const [imageUrl, setImageUrl] = useState("")
 
-  const role = user ? getRole(user.email) : 'none'
+  // Staff Form states (Admin only)
+  const [staffName, setStaffName] = useState("")
+  const [staffEmail, setStaffEmail] = useState("")
+  const [staffRole, setStaffRole] = useState("Bartender")
+
+  const userRole = user ? getRole(user.email) : 'none'
+  const isActualAdmin = isAdmin(user?.email)
+
+  // Queries
+  const staffQuery = useMemoFirebase(() => query(collection(db, "staff_members")), [db])
+  const { data: staffList } = useCollection(staffQuery)
+
+  const ratingsQuery = useMemoFirebase(() => query(collection(db, "ratings")), [db])
+  const { data: allRatings } = useCollection(ratingsQuery)
+
+  const logsQuery = useMemoFirebase(() => query(collection(db, "work_logs"), orderBy("startTime", "desc")), [db])
+  const { data: allLogs } = useCollection(logsQuery)
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setHostname(window.location.hostname)
-    }
+    if (typeof window !== "undefined") setHostname(window.location.hostname)
   }, [])
 
   useEffect(() => {
     if (user && isAuthorized(user.email) && db) {
       const q = query(collection(db, "menu"), orderBy("createdAt", "desc"))
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-        setMenuItems(items)
+        setMenuItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
       })
       return () => unsubscribe()
     }
   }, [user, db])
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast({ title: "Copiado", description: "Dominio copiado al portapapeles." })
-  }
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider()
     try {
       await signInWithPopup(auth, provider)
     } catch (error: any) {
-      let errorMessage = "No se pudo iniciar sesión con Google."
-      if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = `Dominio no autorizado: ${window.location.hostname}.`
-      }
-      toast({ title: "Error", description: errorMessage, variant: "destructive" })
+      toast({ title: "Error", description: error.code === 'auth/unauthorized-domain' ? `Dominio no autorizado: ${hostname}` : "Error de conexión.", variant: "destructive" })
     }
   }
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isAuthorized(user?.email) || !db) return
-
-    const defaultImg = category === "Comidas" 
-      ? "https://picsum.photos/seed/food/400/500" 
-      : "https://picsum.photos/seed/drink/400/500"
-
+    if (!db) return
+    const defaultImg = category === "Comidas" ? "https://picsum.photos/seed/food/400/500" : "https://picsum.photos/seed/drink/400/500"
     try {
       await addDoc(collection(db, "menu"), {
-        title,
-        category,
-        price: Number(price),
-        description,
-        imageUrl: imageUrl || defaultImg,
-        createdAt: new Date().toISOString(),
-        createdBy: user?.email
+        title, category, price: Number(price), description, imageUrl: imageUrl || defaultImg,
+        createdAt: new Date().toISOString(), createdBy: user?.email
       })
-      setTitle("")
-      setPrice("")
-      setDescription("")
-      setImageUrl("")
+      setTitle(""); setPrice(""); setDescription(""); setImageUrl("")
       toast({ title: "Producto añadido", description: `${title} ya está en el menú.` })
-    } catch (error) {
-      toast({ title: "Error", description: "No tienes permiso para escribir.", variant: "destructive" })
+    } catch (e) {
+      toast({ title: "Error", description: "No tienes permiso.", variant: "destructive" })
     }
   }
 
-  const handleDeleteItem = async (id: string, name: string) => {
-    if (!isAdmin(user?.email) || !db) {
-      toast({ title: "Acceso denegado", description: "Solo los administradores pueden borrar productos.", variant: "destructive" })
-      return
-    }
-    if (!confirm(`¿Estás seguro de eliminar "${name}"?`)) return
-
+  const handleAddStaff = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!db || !isActualAdmin) return
     try {
-      await deleteDoc(doc(db, "menu", id))
-      toast({ title: "Eliminado", description: "Producto quitado del menú." })
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo eliminar.", variant: "destructive" })
+      await addDoc(collection(db, "staff_members"), {
+        name: staffName, email: staffEmail.toLowerCase(), role: staffRole, createdAt: serverTimestamp()
+      })
+      setStaffName(""); setStaffEmail("")
+      toast({ title: "Staff añadido", description: `${staffName} ha sido registrado.` })
+    } catch (e) {
+      toast({ title: "Error", description: "Error al registrar personal.", variant: "destructive" })
     }
   }
 
-  if (isUserLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#120108]">
-      <div className="text-[#FF008A] font-bold animate-pulse text-xl font-headline uppercase tracking-widest">Verificando...</div>
-    </div>
-  )
+  const handleClockToggle = async () => {
+    if (!db || !user) return
+    const currentStaff = staffList?.find(s => s.email === user.email)
+    if (!currentStaff) return
 
-  if (!user) {
+    if (currentStaff.activeSession) {
+      // Clock Out
+      const start = new Date(currentStaff.activeSession.startTime)
+      const end = new Date()
+      const diffMs = end.getTime() - start.getTime()
+      const diffMins = Math.round(diffMs / 60000)
+
+      await addDoc(collection(db, "work_logs"), {
+        staffId: currentStaff.id, startTime: currentStaff.activeSession.startTime,
+        endTime: end.toISOString(), durationMinutes: diffMins
+      })
+      await updateDoc(doc(db, "staff_members", currentStaff.id), { activeSession: null })
+      toast({ title: "Salida registrada", description: `Turno de ${Math.floor(diffMins / 60)}h ${diffMins % 60}m finalizado.` })
+    } else {
+      // Clock In
+      await updateDoc(doc(db, "staff_members", currentStaff.id), {
+        activeSession: { startTime: new Date().toISOString() }
+      })
+      toast({ title: "Entrada registrada", description: "¡Buen turno!" })
+    }
+  }
+
+  const getStaffStats = (staffId: string) => {
+    const staffRatings = allRatings?.filter(r => r.staffId === staffId) || []
+    const avgRating = staffRatings.length ? (staffRatings.reduce((a, b) => a + b.score, 0) / staffRatings.length).toFixed(1) : "N/A"
+    
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    const weeklyMins = allLogs?.filter(l => l.staffId === staffId && new Date(l.startTime) > weekAgo)
+      .reduce((a, b) => a + (b.durationMinutes || 0), 0) || 0
+    
+    return { avgRating, weeklyHours: (weeklyMins / 60).toFixed(1) }
+  }
+
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-[#120108] text-[#FF008A] font-bold animate-pulse uppercase tracking-widest">Verificando...</div>
+
+  if (!user || !isAuthorized(user.email)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#120108] p-5">
-        <Card className="w-full max-w-md bg-[#1a020c] border-[#FF008A]/30 text-white overflow-hidden shadow-2xl">
+        <Card className="w-full max-w-md bg-[#1a020c] border-[#FF008A]/30 text-white shadow-2xl overflow-hidden">
           <div className="h-2 bg-[#FF008A]"></div>
-          <CardHeader className="text-center pt-8">
+          <CardHeader className="text-center">
             <ShieldCheck className="w-12 h-12 text-[#FF008A] mx-auto mb-4" />
-            <CardTitle className="text-3xl font-headline text-white uppercase leading-none">Acceso Personal</CardTitle>
-            <p className="text-[#B0B0B0] text-sm mt-2">Mr. Smith - El Mejor Bar Pool de la Costa</p>
+            <CardTitle className="text-3xl font-headline uppercase leading-none">Acceso Personal</CardTitle>
+            <p className="text-[#B0B0B0] text-sm mt-2">{!user ? "Identifícate para gestionar el bar." : "Correo no autorizado."}</p>
           </CardHeader>
           <CardContent className="flex flex-col gap-6 pb-10">
-            <div className="bg-[#FF008A]/5 border border-[#FF008A]/20 p-4 rounded-xl space-y-3">
-              <p className="text-xs text-[#B0B0B0] text-center uppercase tracking-widest font-bold">Autorizar Dominio</p>
-              <div className="flex items-center justify-between bg-black/40 p-2 rounded-lg border border-white/5">
-                <code className="text-[10px] text-[#00F0FF] truncate mr-2">{hostname}</code>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-[#00F0FF]" onClick={() => copyToClipboard(hostname)}>
-                  <Copy className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-            <Button onClick={handleLogin} className="bg-[#FF008A] hover:bg-[#FF008A]/80 text-white font-bold h-14 text-lg rounded-xl shadow-lg">
-              Entrar con Google
-            </Button>
-            <Link href="/" className="text-center text-xs text-[#00F0FF] hover:underline flex items-center justify-center gap-2 mt-2">
-              <ArrowLeft className="w-4 h-4" /> Volver al menú de la costa
-            </Link>
+            {!user ? (
+              <Button onClick={handleLogin} className="bg-[#FF008A] hover:bg-[#FF008A]/80 text-white font-bold h-14 text-lg rounded-xl">Entrar con Google</Button>
+            ) : (
+              <Button onClick={() => signOut(auth)} variant="outline" className="border-white/20 text-white">Cerrar Sesión</Button>
+            )}
+            <Link href="/" className="text-center text-xs text-[#00F0FF] hover:underline flex items-center justify-center gap-2"><ArrowLeft className="w-4 h-4" /> Volver al menú</Link>
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  if (!isAuthorized(user.email)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#120108] p-5">
-        <Card className="w-full max-w-md bg-[#1a020c] border-destructive/50 text-white text-center shadow-2xl">
-          <CardHeader className="pt-8">
-            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <CardTitle className="text-2xl text-destructive font-headline uppercase">Sin Autorización</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 pb-10">
-            <p className="text-[#B0B0B0] text-sm leading-relaxed">
-              El correo <span className="text-white font-bold">{user.email}</span> no es parte del staff autorizado.
-            </p>
-            <Button onClick={() => signOut(auth)} variant="outline" className="border-white/20 text-white hover:bg-white/5 w-full">
-              Cerrar Sesión
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  const currentStaffProfile = staffList?.find(s => s.email === user.email)
 
   return (
     <div className="min-h-screen bg-[#120108] text-white p-5 pb-24">
-      <header className="flex justify-between items-center mb-10 max-w-4xl mx-auto">
+      <header className="flex justify-between items-center mb-8 max-w-5xl mx-auto">
         <div className="flex items-center gap-4">
-          <div className="bg-[#FF008A]/20 p-3 rounded-full border border-[#FF008A]/40">
-            <UserCircle className="w-8 h-8 text-[#FF008A]" />
-          </div>
+          <div className="bg-[#FF008A]/20 p-3 rounded-full border border-[#FF008A]/40"><UserCircle className="w-8 h-8 text-[#FF008A]" /></div>
           <div>
-            <h1 className="text-xl font-headline font-bold text-[#FF008A] uppercase tracking-tight">
-              {role === 'admin' ? 'Panel Gerencia' : 'Panel Personal'}
-            </h1>
+            <h1 className="text-xl font-headline font-bold text-[#FF008A] uppercase tracking-tight">{isActualAdmin ? 'Gerencia' : 'Staff'}</h1>
             <p className="text-[10px] text-[#B0B0B0] font-bold uppercase tracking-widest">{user.email}</p>
           </div>
         </div>
-        <Button onClick={() => signOut(auth)} size="icon" variant="ghost" className="text-white hover:bg-destructive/20 hover:text-destructive rounded-full h-12 w-12">
-          <LogOut className="w-6 h-6" />
-        </Button>
+        <div className="flex gap-2">
+          {currentStaffProfile && (
+             <Button 
+                onClick={handleClockToggle} 
+                className={currentStaffProfile.activeSession ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"}
+              >
+               <Clock className="w-4 h-4 mr-2" />
+               {currentStaffProfile.activeSession ? "Marcar Salida" : "Marcar Entrada"}
+             </Button>
+          )}
+          <Button onClick={() => signOut(auth)} size="icon" variant="ghost" className="hover:bg-destructive/20 rounded-full h-10 w-10"><LogOut className="w-5 h-5" /></Button>
+        </div>
       </header>
 
-      <div className="grid gap-8 max-w-4xl mx-auto">
-        <Card className="bg-[#1a020c] border-[#00F0FF]/30 text-white shadow-xl overflow-hidden">
-          <div className="h-1 bg-[#00F0FF]"></div>
-          <CardHeader>
-            <CardTitle className="text-[#00F0FF] flex items-center gap-2 font-headline text-xl uppercase">
-              <Plus className="w-6 h-6" /> Nuevo Producto
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleAddItem} className="space-y-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="title" className="text-[10px] uppercase tracking-widest text-[#B0B0B0]">Nombre</Label>
-                  <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Gin Tonic Eléctrico" className="bg-white/5 border-white/10 h-12 focus:border-[#00F0FF]" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="category" className="text-[10px] uppercase tracking-widest text-[#B0B0B0]">Categoría</Label>
-                  <select 
-                    id="category" 
-                    value={category} 
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="flex h-12 w-full rounded-md border border-white/10 bg-[#1a020c] px-3 py-2 text-sm text-white focus:ring-1 focus:ring-[#00F0FF] outline-none"
-                  >
-                    <option value="Tragos">Tragos</option>
-                    <option value="Bebidas c/ Alcohol">Bebidas c/ Alcohol</option>
-                    <option value="Bebidas s/ Alcohol">Bebidas s/ Alcohol</option>
-                    <option value="Comidas">Comidas</option>
-                    <option value="Fichas">Fichas</option>
-                  </select>
-                </div>
-              </div>
+      <Tabs defaultValue="menu" className="max-w-5xl mx-auto">
+        <TabsList className="grid w-full grid-cols-2 bg-[#1a020c] border border-white/10 mb-8 p-1">
+          <TabsTrigger value="menu" className="data-[state=active]:bg-[#FF008A] data-[state=active]:text-white font-bold uppercase text-xs">Menú del Bar</TabsTrigger>
+          <TabsTrigger value="staff" className="data-[state=active]:bg-[#00F0FF] data-[state=active]:text-[#120108] font-bold uppercase text-xs">Gestión Staff</TabsTrigger>
+        </TabsList>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="price" className="text-[10px] uppercase tracking-widest text-[#B0B0B0]">Precio ($)</Label>
-                  <Input id="price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="3500" className="bg-white/5 border-white/10 h-12 focus:border-[#00F0FF]" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="imageUrl" className="text-[10px] uppercase tracking-widest text-[#B0B0B0]">URL Imagen (Opcional)</Label>
-                  <div className="relative">
-                    <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." className="bg-white/5 border-white/10 h-12 pl-10 focus:border-[#00F0FF]" />
-                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+        <TabsContent value="menu" className="space-y-8">
+          <Card className="bg-[#1a020c] border-[#FF008A]/30 text-white shadow-xl overflow-hidden">
+            <CardHeader><CardTitle className="text-[#FF008A] flex items-center gap-2 font-headline text-xl uppercase"><Plus className="w-6 h-6" /> Añadir al Menú</CardTitle></CardHeader>
+            <CardContent>
+              <form onSubmit={handleAddItem} className="grid gap-4 md:grid-cols-2">
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Nombre del producto" className="bg-white/5 h-12" />
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className="bg-[#1a020c] border border-white/10 rounded-md h-12 px-3 text-sm">
+                  <option value="Tragos">Tragos</option><option value="Comidas">Comidas</option><option value="Fichas">Fichas</option>
+                </select>
+                <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="Precio ($)" className="bg-white/5 h-12" />
+                <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="URL de Imagen (Opcional)" className="bg-white/5 h-12" />
+                <Input value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Descripción corta" className="md:col-span-2 bg-white/5 h-12" />
+                <Button type="submit" className="md:col-span-2 bg-[#FF008A] hover:bg-[#FF008A]/80 font-bold h-12 uppercase">Publicar</Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-3">
+            {menuItems.map((item) => (
+              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5">
+                <div className="flex items-center gap-4">
+                  <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-white/10">
+                    <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
+                  </div>
+                  <div>
+                    <p className="font-bold">{item.title} <span className="text-[10px] text-[#FF008A] ml-2 uppercase opacity-60">[{item.category}]</span></p>
+                    <p className="text-[#00F0FF] font-bold text-xs">${item.price.toLocaleString()}</p>
                   </div>
                 </div>
+                {isActualAdmin && (
+                  <Button onClick={async () => { if(confirm("¿Eliminar?")) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="text-white/20 hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                )}
               </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="desc" className="text-[10px] uppercase tracking-widest text-[#B0B0B0]">Descripción</Label>
-                <Input id="desc" value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Ingredientes o detalles..." className="bg-white/5 border-white/10 h-12 focus:border-[#00F0FF]" />
-              </div>
-
-              <Button type="submit" className="w-full bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#120108] font-bold h-14 text-lg rounded-xl transition-all">
-                Publicar en Menú
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {menuItems.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Inventario de Menú ({menuItems.length})</h2>
-            <div className="grid gap-3">
-              {menuItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 bg-[#1a020c] rounded-2xl border border-white/5 group hover:border-[#FF008A]/30 transition-all overflow-hidden">
-                  <div className="flex items-center gap-4">
-                    <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
-                      <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[8px] bg-[#FF008A]/20 text-[#FF008A] px-2 py-0.5 rounded uppercase font-bold border border-[#FF008A]/20">{item.category}</span>
-                        <p className="font-bold text-base">{item.title}</p>
-                      </div>
-                      <p className="text-[#00F0FF] font-bold text-sm">${item.price.toLocaleString('es-AR')}</p>
-                    </div>
-                  </div>
-                  
-                  {role === 'admin' ? (
-                    <Button onClick={() => handleDeleteItem(item.id, item.title)} variant="ghost" size="icon" className="text-white/20 hover:text-destructive h-12 w-12">
-                      <Trash2 className="w-5 h-5" />
-                    </Button>
-                  ) : (
-                    <div className="text-[10px] text-white/20 uppercase font-bold px-4">Solo lectura</div>
-                  )}
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
-        )}
-      </div>
-      
-      <div className="fixed bottom-0 left-0 right-0 p-4 flex justify-center bg-[#120108]/80 backdrop-blur-xl border-t border-white/5 z-50">
-         <Link href="/">
-          <Button variant="ghost" className="text-[#00F0FF] font-bold uppercase text-xs tracking-widest">
-             <ArrowLeft className="mr-2 w-4 h-4" /> Volver al menú del mejor bar pool de la costa
-          </Button>
-         </Link>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="staff" className="space-y-8">
+          {isActualAdmin && (
+            <Card className="bg-[#1a020c] border-[#00F0FF]/30 text-white shadow-xl">
+              <CardHeader><CardTitle className="text-[#00F0FF] flex items-center gap-2 font-headline text-xl uppercase"><Users className="w-6 h-6" /> Nuevo Staff</CardTitle></CardHeader>
+              <CardContent>
+                <form onSubmit={handleAddStaff} className="grid gap-4 md:grid-cols-3">
+                  <Input value={staffName} onChange={(e) => setStaffName(e.target.value)} required placeholder="Nombre completo" className="bg-white/5 h-12" />
+                  <Input type="email" value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)} required placeholder="Email (Gmail)" className="bg-white/5 h-12" />
+                  <select value={staffRole} onChange={(e) => setStaffRole(e.target.value)} className="bg-[#1a020c] border border-white/10 rounded-md h-12 px-3">
+                    <option value="Bartender">Bartender</option><option value="Mesero">Mesero</option><option value="Seguridad">Seguridad</option>
+                  </select>
+                  <Button type="submit" className="md:col-span-3 bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#120108] font-bold h-12 uppercase">Registrar Personal</Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {staffList?.map((staff) => {
+              const { avgRating, weeklyHours } = getStaffStats(staff.id)
+              return (
+                <Card key={staff.id} className="bg-[#1a020c] border-white/5 hover:border-[#00F0FF]/20 transition-all">
+                  <CardContent className="pt-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <p className="font-bold text-lg">{staff.name}</p>
+                        <p className="text-[10px] font-bold text-[#00F0FF] uppercase tracking-widest">{staff.role}</p>
+                        <p className="text-[9px] text-white/40 mt-1">{staff.email}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-1 text-yellow-500 font-bold"><Star className="w-3 h-3 fill-yellow-500" /> {avgRating}</div>
+                        {staff.activeSession && <div className="text-[10px] bg-green-500/20 text-green-500 px-2 py-0.5 rounded-full animate-pulse">En turno</div>}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-4">
+                      <div className="text-center">
+                        <p className="text-[9px] uppercase text-[#B0B0B0] mb-1">Horas Semanal</p>
+                        <p className="text-xl font-headline font-bold text-[#FF008A]">{weeklyHours}h</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[9px] uppercase text-[#B0B0B0] mb-1">Calificaciones</p>
+                        <p className="text-xl font-headline font-bold text-[#00F0FF]">
+                          {allRatings?.filter(r => r.staffId === staff.id).length || 0}
+                        </p>
+                      </div>
+                    </div>
+                    {isActualAdmin && !ADMIN_WHITELIST.includes(staff.email) && (
+                      <Button 
+                        onClick={async () => { if(confirm("¿Eliminar staff?")) await deleteDoc(doc(db!, "staff_members", staff.id)) }} 
+                        variant="ghost" size="sm" className="w-full mt-4 text-destructive hover:bg-destructive/10">Eliminar</Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <footer className="fixed bottom-0 left-0 right-0 p-4 flex justify-center bg-[#120108]/95 backdrop-blur-xl border-t border-white/5">
+        <Link href="/"><Button variant="ghost" className="text-[#00F0FF] font-bold uppercase text-xs tracking-widest"><ArrowLeft className="mr-2 w-4 h-4" /> Volver al menú de la costa</Button></Link>
+      </footer>
     </div>
   )
 }
