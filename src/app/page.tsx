@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -16,8 +15,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { QrCode, Settings, Loader2 } from "lucide-react"
+import { QrCode, Settings, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import Link from "next/link"
 
 const CATEGORIES = ["Todos", "Tragos", "Bebidas c/ Alcohol", "Bebidas s/ Alcohol", "Comidas", "Fichas"]
@@ -28,9 +28,8 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Todos")
   const [menuItems, setMenuItems] = useState<MenuItemProps[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentUrl, setCurrentUrl] = useState("")
+  const [publicUrl, setPublicUrl] = useState("")
 
-  // Verificación de Admin Dinámico
   const staffQuery = useMemoFirebase(() => query(collection(db, "staff_members")), [db])
   const { data: staffList } = useCollection(staffQuery)
   
@@ -39,23 +38,17 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setCurrentUrl(window.location.href)
+      setPublicUrl(window.location.origin)
     }
   }, [])
 
   useEffect(() => {
     if (!db) return
-    
     const q = query(collection(db, "menu"), orderBy("createdAt", "desc"))
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const items: any[] = []
-      querySnapshot.forEach((doc) => {
-        items.push({ id: doc.id, ...doc.data() })
-      })
+      querySnapshot.forEach((doc) => items.push({ id: doc.id, ...doc.data() }))
       setMenuItems(items)
-      setLoading(false)
-    }, (error) => {
-      console.error("Error cargando el menú:", error)
       setLoading(false)
     })
     return () => unsubscribe()
@@ -65,6 +58,8 @@ export default function Home() {
     ? menuItems 
     : menuItems.filter(item => item.category === activeCategory)
 
+  const isDevUrl = publicUrl.includes("workstations.google.com")
+
   return (
     <div className="min-h-screen pb-32 bg-[#120108]">
       <header className="px-5 pt-10 pb-6 flex justify-between items-start max-w-4xl mx-auto">
@@ -72,7 +67,6 @@ export default function Home() {
           <p className="text-[#00F0FF] text-[10px] font-bold uppercase tracking-[0.3em]">Bienvenido al</p>
           <h1 className="text-4xl font-headline font-bold uppercase leading-tight text-[#FF008A] tracking-tighter">Mr. Smith</h1>
           <h2 className="text-2xl font-headline font-bold uppercase tracking-tighter text-[#00F0FF] -mt-1 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">Mejor Bar Pool de la Costa</h2>
-          <p className="text-[#B0B0B0] mt-3 max-w-[280px] text-sm leading-relaxed">Disfruta del mejor pool en un ambiente eléctrico y futurista frente al mar.</p>
         </div>
         
         <div className="flex gap-2">
@@ -90,66 +84,49 @@ export default function Home() {
                 <QrCode className="w-6 h-6" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[#1a020c] border-[#FF008A]/30 text-white max-w-[300px] rounded-3xl p-8">
+            <DialogContent className="bg-[#1a020c] border-[#FF008A]/30 text-white max-w-[350px] rounded-3xl p-6">
               <DialogHeader>
                 <DialogTitle className="text-center font-headline text-xl text-[#FF008A] uppercase tracking-widest">Compartir Menú</DialogTitle>
               </DialogHeader>
-              <div className="flex flex-col items-center gap-6 py-4">
-                <div className="bg-white p-4 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                  {currentUrl && <QRCodeSVG value={currentUrl} size={180} />}
+              <div className="flex flex-col items-center gap-4 py-4">
+                <div className="bg-white p-4 rounded-2xl">
+                  <QRCodeSVG value={publicUrl} size={180} />
                 </div>
-                <p className="text-center text-xs text-[#B0B0B0] px-2 font-medium">Escanea este código para acceder al menú del mejor bar pool de la costa.</p>
+                {isDevUrl && userIsAdmin && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex flex-col gap-2">
+                    <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 uppercase"><AlertCircle className="w-3 h-3" /> ¡Aviso!</p>
+                    <p className="text-[10px] text-white/80 leading-tight">Estás usando una URL de desarrollo privada. Los clientes no podrán verla. Despliega tu app para obtener la URL pública (ej: web.app) y pégala aquí debajo para generar un QR válido:</p>
+                    <Input 
+                      value={publicUrl} 
+                      onChange={(e) => setPublicUrl(e.target.value)} 
+                      placeholder="https://tu-bar.web.app" 
+                      className="h-8 text-[10px] bg-black/40 border-white/10"
+                    />
+                  </div>
+                )}
+                <p className="text-center text-[10px] text-[#B0B0B0] px-2">Escanea para acceder al mejor menú de la costa.</p>
               </div>
             </DialogContent>
           </Dialog>
         </div>
       </header>
 
-      <CategoryNav 
-        categories={CATEGORIES} 
-        activeCategory={activeCategory} 
-        onCategoryChange={setActiveCategory} 
-      />
+      <CategoryNav categories={CATEGORIES} activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
 
       <main className="px-5 mt-6 max-w-4xl mx-auto">
         {loading ? (
           <div className="py-24 text-center flex flex-col items-center gap-4">
             <Loader2 className="w-10 h-10 text-[#FF008A] animate-spin" />
-            <p className="text-[#FF008A] font-bold uppercase tracking-widest text-xs">Cargando el mejor menú de la costa...</p>
+            <p className="text-[#FF008A] font-bold uppercase tracking-widest text-xs">Cargando...</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
-            {filteredItems.map((item) => (
-              <MenuCard key={item.id} {...item} />
-            ))}
-          </div>
-        )}
-
-        {!loading && filteredItems.length === 0 && (
-          <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[32px] bg-white/[0.02]">
-            <p className="text-[#B0B0B0] text-sm italic">
-              No hay productos disponibles en esta sección actualmente.
-            </p>
-            {userIsAdmin && (
-              <Link href="/admin">
-                <Button variant="link" className="text-[#FF008A] mt-4 font-bold uppercase text-xs tracking-widest">
-                  Añadir productos ahora
-                </Button>
-              </Link>
-            )}
+            {filteredItems.map((item) => <MenuCard key={item.id} {...item} />)}
           </div>
         )}
       </main>
 
       <QuickActions />
-
-      <footer className="mt-20 mb-24 text-center">
-        <div className="w-10 h-[1px] bg-[#FF008A]/30 mx-auto mb-6"></div>
-        <p className="font-headline uppercase tracking-[0.4em] text-[9px] text-[#B0B0B0] opacity-40">Mr. Smith - El Mejor Bar Pool de la Costa</p>
-        <Link href="/admin" className="text-[10px] text-[#B0B0B0] opacity-10 hover:opacity-100 transition-opacity mt-4 inline-block hover:text-[#00F0FF]">
-          ACCESO PERSONAL AUTORIZADO
-        </Link>
-      </footer>
     </div>
   )
 }

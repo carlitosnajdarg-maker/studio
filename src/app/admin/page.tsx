@@ -1,18 +1,17 @@
-
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth, useFirestore, useUser, useMemoFirebase, useCollection } from "@/firebase"
 import { signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth"
-import { isAdmin, isOwner, isAuthorized, getRole, OWNER_WHITELIST, ADMIN_WHITELIST } from "@/lib/admin-config"
+import { isAdmin, isOwner, isAuthorized } from "@/lib/admin-config"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp, where, getDocs } from "firebase/firestore"
+import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, Clock, Star, Users, Beer, Utensils, Coins, Image as ImageIcon, UserCircle, Edit2, CheckCircle2, Upload, Loader2 } from "lucide-react"
+import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, Clock, Star, Users, UserCircle, Edit2, Upload, Loader2, Info } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -24,7 +23,6 @@ export default function AdminPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [menuItems, setMenuItems] = useState<any[]>([])
-  const [hostname, setHostname] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null)
   
@@ -56,10 +54,6 @@ export default function AdminPage() {
   const isActualAdmin = isAdmin(user?.email) || staffProfile?.role === 'Gerente' || isActualOwner
 
   useEffect(() => {
-    if (typeof window !== "undefined") setHostname(window.location.hostname)
-  }, [])
-
-  useEffect(() => {
     if (user && (isAuthorized(user.email) || staffProfile) && db) {
       const q = query(collection(db, "menu"), orderBy("createdAt", "desc"))
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -74,21 +68,21 @@ export default function AdminPage() {
     try {
       await signInWithPopup(auth, provider)
     } catch (error: any) {
-      toast({ title: "Error", description: "Error de conexión.", variant: "destructive" })
+      toast({ title: "Error", description: "Verifica que el dominio esté autorizado en la consola de Firebase.", variant: "destructive" })
     }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      if (file.size > 800000) {
-        toast({ title: "Archivo muy pesado", description: "Por favor usa una imagen de menos de 800KB.", variant: "destructive" })
+      if (file.size > 1024 * 1024) { // 1MB limit for Base64 efficiency
+        toast({ title: "Archivo muy pesado", description: "Por favor usa una imagen de menos de 1MB.", variant: "destructive" })
         return
       }
       const reader = new FileReader()
       reader.onloadend = () => {
         setImageUrl(reader.result as string)
-        toast({ title: "Imagen lista", description: "Se ha cargado el archivo correctamente." })
+        toast({ title: "Imagen lista", description: "Imagen cargada correctamente." })
       }
       reader.readAsDataURL(file)
     }
@@ -136,7 +130,7 @@ export default function AdminPage() {
       
       resetMenuForm()
     } catch (e) {
-      toast({ title: "Error", description: "No tienes permiso para realizar esta acción.", variant: "destructive" })
+      toast({ title: "Error", description: "No tienes permiso para esta acción.", variant: "destructive" })
     }
   }
 
@@ -159,13 +153,14 @@ export default function AdminPage() {
 
       if (editingStaffId) {
         await updateDoc(doc(db, "staff_members", editingStaffId), staffData)
-        toast({ title: "Personal actualizado", description: `${staffName} ha sido modificado.` })
+        toast({ title: "Personal actualizado", description: `${staffName} modificado.` })
       } else {
         await addDoc(collection(db, "staff_members"), {
           ...staffData,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          activeSession: null
         })
-        toast({ title: "Personal registrado", description: `${staffName} ha sido añadido como ${staffRole}.` })
+        toast({ title: "Personal registrado", description: `${staffName} añadido como ${staffRole}.` })
       }
       
       resetStaffForm()
@@ -195,7 +190,7 @@ export default function AdminPage() {
         endTime: end.toISOString(), durationMinutes: diffMins
       })
       await updateDoc(doc(db, "staff_members", currentStaff.id), { activeSession: null })
-      toast({ title: "Salida registrada", description: `Turno finalizado.` })
+      toast({ title: "Salida registrada", description: `Turno de ${Math.floor(diffMins/60)}h ${diffMins%60}m finalizado.` })
     } else {
       await updateDoc(doc(db, "staff_members", currentStaff.id), {
         activeSession: { startTime: new Date().toISOString() }
@@ -215,7 +210,6 @@ export default function AdminPage() {
     
     return { 
       avgRating, 
-      weeklyMins,
       displayTime: `${Math.floor(weeklyMins / 60)}h ${weeklyMins % 60}m`
     }
   }
@@ -229,7 +223,7 @@ export default function AdminPage() {
           <div className="h-2 bg-[#FF008A]"></div>
           <CardHeader className="text-center">
             <ShieldCheck className="w-12 h-12 text-[#FF008A] mx-auto mb-4" />
-            <CardTitle className="text-3xl font-headline uppercase leading-none">Acceso Personal</CardTitle>
+            <CardTitle className="text-3xl font-headline uppercase">Acceso Personal</CardTitle>
             <p className="text-[#B0B0B0] text-sm mt-2">{!user ? "Identifícate para gestionar el bar." : "Correo no autorizado."}</p>
           </CardHeader>
           <CardContent className="flex flex-col gap-6 pb-10">
@@ -238,6 +232,10 @@ export default function AdminPage() {
             ) : (
               <Button onClick={() => signOut(auth)} variant="outline" className="border-white/20 text-white">Cerrar Sesión</Button>
             )}
+            <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-[11px] text-[#B0B0B0] flex flex-col gap-2">
+               <p className="font-bold text-[#00F0FF] uppercase flex items-center gap-1"><Info className="w-3 h-3" /> IMPORTANTE:</p>
+               <p>Si el login falla, asegúrate de añadir el dominio de esta página en la consola de Firebase (Authentication &gt; Settings &gt; Authorized Domains).</p>
+            </div>
             <Link href="/" className="text-center text-xs text-[#00F0FF] hover:underline flex items-center justify-center gap-2"><ArrowLeft className="w-4 h-4" /> Volver al menú</Link>
           </CardContent>
         </Card>
@@ -313,7 +311,7 @@ export default function AdminPage() {
                 <div className="space-y-2">
                   <Label className="text-[10px] uppercase text-[#B0B0B0]">Imagen</Label>
                   <div className="flex gap-2">
-                    <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="URL de imagen" className="bg-white/5 h-12 flex-1" />
+                    <Input value={imageUrl && !imageUrl.startsWith('data:') ? imageUrl : ""} onChange={(e) => setImageUrl(e.target.value)} placeholder="URL o sube archivo" className="bg-white/5 h-12 flex-1" />
                     <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} className="h-12 w-12 border-white/10 hover:bg-[#FF008A]/10">
                       <Upload className="w-5 h-5 text-[#FF008A]" />
                     </Button>
@@ -322,9 +320,9 @@ export default function AdminPage() {
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <Label className="text-[10px] uppercase text-[#B0B0B0]">Descripción</Label>
-                  <Input value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Breve descripción del producto..." className="bg-white/5 h-12" />
+                  <Input value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Breve descripción..." className="bg-white/5 h-12" />
                 </div>
-                <Button type="submit" className={`md:col-span-2 font-bold h-12 uppercase ${editingId ? 'bg-[#00F0FF] text-[#120108] hover:bg-[#00F0FF]/80' : 'bg-[#FF008A] hover:bg-[#FF008A]/80'}`}>
+                <Button type="submit" className={`md:col-span-2 font-bold h-12 uppercase ${editingId ? 'bg-[#00F0FF] text-[#120108]' : 'bg-[#FF008A]'}`}>
                   {editingId ? 'Guardar Cambios' : 'Publicar Producto'}
                 </Button>
               </form>
@@ -333,7 +331,7 @@ export default function AdminPage() {
 
           <div className="grid gap-3">
             {menuItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5 hover:border-[#FF008A]/20 transition-all">
+              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5">
                 <div className="flex items-center gap-4">
                   <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-white/10 bg-black">
                     <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
@@ -346,7 +344,7 @@ export default function AdminPage() {
                 <div className="flex gap-1">
                   <Button onClick={() => handleEditItem(item)} variant="ghost" size="icon" className="text-white/20 hover:text-[#00F0FF]"><Edit2 className="w-4 h-4" /></Button>
                   {isActualAdmin && (
-                    <Button onClick={async () => { if(confirm("¿Eliminar producto definitivamente?")) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="text-white/20 hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                    <Button onClick={async () => { if(confirm("¿Eliminar producto?")) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="text-white/20 hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
                   )}
                 </div>
               </div>
@@ -356,12 +354,12 @@ export default function AdminPage() {
 
         <TabsContent value="staff" className="space-y-8">
           {isActualAdmin && (
-            <Card className={`bg-[#1a020c] border-2 shadow-xl ${editingStaffId ? 'border-[#00F0FF]/50' : (isActualOwner ? 'border-[#00F0FF]/30' : 'border-white/10')}`}>
+            <Card className={`bg-[#1a020c] border-2 shadow-xl ${editingStaffId ? 'border-[#00F0FF]/50' : 'border-white/10'}`}>
               <CardHeader>
-                <CardTitle className={`flex items-center justify-between font-headline text-xl uppercase ${editingStaffId ? 'text-[#00F0FF]' : 'text-[#00F0FF]'}`}>
+                <CardTitle className="flex items-center justify-between font-headline text-xl uppercase text-[#00F0FF]">
                   <span className="flex items-center gap-2">
                     {editingStaffId ? <Edit2 className="w-6 h-6" /> : <Users className="w-6 h-6" />}
-                    {editingStaffId ? 'Editar Miembro' : 'Gestión de Personal'}
+                    {editingStaffId ? 'Editar Miembro' : 'Gestión de Staff'}
                   </span>
                   {editingStaffId && <Button variant="ghost" size="sm" onClick={resetStaffForm} className="text-white/40 hover:text-white">Cancelar</Button>}
                 </CardTitle>
@@ -386,7 +384,7 @@ export default function AdminPage() {
                       {isActualOwner && <option value="Gerente">Gerente</option>}
                     </select>
                   </div>
-                  <Button type="submit" className={`md:col-span-3 font-bold h-12 uppercase ${editingStaffId ? 'bg-[#FF008A] text-white' : 'bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#120108]'}`}>
+                  <Button type="submit" className={`md:col-span-3 font-bold h-12 uppercase ${editingStaffId ? 'bg-[#FF008A]' : 'bg-[#00F0FF] text-[#120108]'}`}>
                     {editingStaffId ? 'Guardar Cambios' : 'Registrar Nuevo Miembro'}
                   </Button>
                 </form>
@@ -397,11 +395,8 @@ export default function AdminPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {staffList?.map((staff) => {
               const { avgRating, displayTime } = getStaffStats(staff.id)
-              const isStaffOwner = staff.role === 'Dueño' || OWNER_WHITELIST.includes(staff.email)
-              const isStaffAdmin = staff.role === 'Gerente' || ADMIN_WHITELIST.includes(staff.email)
-              
               return (
-                <Card key={staff.id} className="bg-[#1a020c] border-white/5 hover:border-[#00F0FF]/20 transition-all relative">
+                <Card key={staff.id} className="bg-[#1a020c] border-white/5 relative">
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
@@ -413,10 +408,9 @@ export default function AdminPage() {
                             </button>
                           )}
                         </div>
-                        <p className={`text-[10px] font-bold uppercase tracking-widest ${isStaffOwner ? 'text-[#00F0FF]' : (isStaffAdmin ? 'text-yellow-400' : 'text-[#FF008A]')}`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest ${staff.role === 'Dueño' ? 'text-[#00F0FF]' : (staff.role === 'Gerente' ? 'text-yellow-400' : 'text-[#FF008A]')}`}>
                           {staff.role}
                         </p>
-                        <p className="text-[9px] text-white/40 mt-1">{staff.email}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <div className="flex items-center gap-1 text-yellow-500 font-bold"><Star className="w-3 h-3 fill-yellow-500" /> {avgRating}</div>
@@ -425,7 +419,7 @@ export default function AdminPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-4">
                       <div className="text-center">
-                        <p className="text-[9px] uppercase text-[#B0B0B0] mb-1">Tiempo Semanal</p>
+                        <p className="text-[9px] uppercase text-[#B0B0B0] mb-1">Semana</p>
                         <p className="text-xl font-headline font-bold text-[#FF008A]">{displayTime}</p>
                       </div>
                       <div className="text-center">
@@ -435,11 +429,6 @@ export default function AdminPage() {
                         </p>
                       </div>
                     </div>
-                    {isActualOwner && !OWNER_WHITELIST.includes(staff.email) && staff.email !== user?.email && (
-                      <Button 
-                        onClick={async () => { if(confirm(`¿Eliminar acceso de ${staff.name}?`)) await deleteDoc(doc(db!, "staff_members", staff.id)) }} 
-                        variant="ghost" size="sm" className="w-full mt-4 text-destructive hover:bg-destructive/10">Dar de Baja</Button>
-                    )}
                   </CardContent>
                 </Card>
               )
@@ -447,10 +436,6 @@ export default function AdminPage() {
           </div>
         </TabsContent>
       </Tabs>
-
-      <footer className="fixed bottom-0 left-0 right-0 p-4 flex justify-center bg-[#120108]/95 backdrop-blur-xl border-t border-white/5">
-        <Link href="/"><Button variant="ghost" className="text-[#00F0FF] font-bold uppercase text-xs tracking-widest"><ArrowLeft className="mr-2 w-4 h-4" /> Volver al menú del bar pool</Button></Link>
-      </footer>
     </div>
   )
 }
