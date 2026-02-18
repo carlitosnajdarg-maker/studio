@@ -293,13 +293,22 @@ export default function AdminPage() {
         <Card className="bg-blue-600/10 border-blue-500/30 mb-8 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-[10px] font-headline uppercase text-blue-400 flex items-center gap-2 tracking-widest">
-              <Rocket className="w-4 h-4" /> Cómo hacer pública tu web (Plan Spark)
+              <Rocket className="w-4 h-4" /> Lanzamiento de Mr. Smith
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-[11px] text-white/70">
-            <p>1. Busca tu URL de hosting en la consola de Firebase (ej: <b>mrsmith.web.app</b>).</p>
-            <p>2. Ve a <b>Authentication {'>'} Settings {'>'} Authorized domains</b> y añade esa URL.</p>
-            <p>3. Pega esa misma URL en el botón de QR de la pantalla principal para tus clientes.</p>
+          <CardContent className="space-y-3 text-[11px] text-white/70">
+            <div className="flex items-start gap-2">
+              <div className="bg-blue-500/20 p-1 rounded">1</div>
+              <p>Busca tu URL pública en la consola de Firebase (ej: <b>mrsmith.web.app</b>).</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="bg-blue-500/20 p-1 rounded">2</div>
+              <p>Ve a <b>Authentication {'>'} Settings {'>'} Authorized domains</b> y añade esa URL.</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="bg-blue-500/20 p-1 rounded">3</div>
+              <p>Si ves la página azul de "Bienvenido", espera 2 min y refresca. ¡Tu menú está cargando!</p>
+            </div>
           </CardContent>
         </Card>
       )}

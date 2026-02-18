@@ -17,7 +17,7 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { QrCode, Settings, Loader2, Info, AlertCircle, Globe, ShieldCheck } from "lucide-react"
+import { QrCode, Settings, Loader2, Info, AlertCircle, Globe, ShieldCheck, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
@@ -50,7 +50,7 @@ export default function Home() {
   const { data: staffList } = useCollection(staffQuery)
   
   const userProfile = staffList?.find(s => s.email?.toLowerCase() === user?.email?.toLowerCase())
-  const userIsAdmin = isAdmin(user?.email) || userProfile?.role === 'Gerente' || userProfile?.role === 'Dueño' || isOwner(user?.email)
+  const userIsGerenteOrOwner = isAdmin(user?.email) || userProfile?.role === 'Gerente' || userProfile?.role === 'Dueño' || isOwner(user?.email)
 
   useEffect(() => {
     if (!db) return
@@ -65,7 +65,7 @@ export default function Home() {
   }, [db])
 
   const handleSaveUrl = async () => {
-    if (!db || !userIsAdmin) return
+    if (!db || !userIsGerenteOrOwner) return
     try {
       await setDoc(doc(db, "settings", "general"), { publicUrl: inputUrl }, { merge: true })
       toast({ title: "URL de QR actualizada" })
@@ -88,7 +88,7 @@ export default function Home() {
         </div>
         
         <div className="flex gap-2">
-          {userIsAdmin && (
+          {userIsGerenteOrOwner && (
             <Link href="/admin">
               <Button size="icon" variant="ghost" className="text-[#00F0FF] hover:bg-[#00F0FF]/10 mt-1 rounded-full border border-[#00F0FF]/20">
                 <Settings className="w-5 h-5" />
@@ -112,11 +112,11 @@ export default function Home() {
                   <QRCodeSVG value={settings?.publicUrl || inputUrl} size={180} />
                 </div>
                 
-                {userIsAdmin && (
+                {userIsGerenteOrOwner ? (
                   <div className="w-full space-y-3 mt-2">
                     <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
                       <p className="text-[10px] text-blue-400 font-bold flex items-center gap-1 uppercase mb-2">
-                        <ShieldCheck className="w-3 h-3" /> Configuración (Solo Gerencia)
+                        <ShieldCheck className="w-3 h-3" /> Configuración Gerencial
                       </p>
                       <div className="flex gap-2">
                         <Input 
@@ -128,17 +128,19 @@ export default function Home() {
                         <Button onClick={handleSaveUrl} size="sm" className="h-9 bg-[#00F0FF] text-black font-bold">OK</Button>
                       </div>
                       <p className="text-[9px] text-white/40 mt-2 leading-tight">
-                        Esta URL define a dónde irán los clientes al escanear el QR.
+                        Define a dónde irán los clientes al escanear el QR.
                       </p>
                     </div>
                   </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-[10px] text-white/30 uppercase font-bold">
+                    <Lock className="w-3 h-3" /> Solo Gerentes pueden editar el link
+                  </div>
                 )}
                 
-                {!userIsAdmin && (
-                  <p className="text-[10px] text-[#B0B0B0] text-center font-medium">
-                    Muestra este código a tus clientes para que accedan al menú digital.
-                  </p>
-                )}
+                <p className="text-[10px] text-[#B0B0B0] text-center font-medium">
+                  Muestra este código a tus clientes para que accedan al menú digital.
+                </p>
               </div>
             </DialogContent>
           </Dialog>
