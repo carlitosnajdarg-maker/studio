@@ -6,7 +6,6 @@ import { CategoryNav } from "@/components/menu/CategoryNav"
 import { MenuCard, MenuItemProps } from "@/components/menu/MenuCard"
 import { QuickActions } from "@/components/menu/QuickActions"
 import { useFirestore, useAuth, useUser } from "@/firebase"
-import { onAuthStateChanged } from "firebase/auth"
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore"
 import { QRCodeSVG } from "qrcode.react"
 import { isAdmin } from "@/lib/admin-config"
@@ -17,16 +16,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { QrCode, Settings, AlertTriangle, Loader2 } from "lucide-react"
+import { QrCode, Settings, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 const CATEGORIES = ["Todos", "Tragos", "Bebidas c/ Alcohol", "Bebidas s/ Alcohol", "Comidas", "Fichas"]
 
 export default function Home() {
   const db = useFirestore()
-  const auth = useAuth()
   const { user } = useUser()
   const [activeCategory, setActiveCategory] = useState("Todos")
   const [menuItems, setMenuItems] = useState<MenuItemProps[]>([])
@@ -40,7 +37,6 @@ export default function Home() {
     }
   }, [])
 
-  // Verificación de admin para mostrar botón de configuración
   useEffect(() => {
     if (user) {
       setUserIsAdmin(isAdmin(user.email))
@@ -49,7 +45,6 @@ export default function Home() {
     }
   }, [user])
 
-  // Carga pública del menú desde Firestore
   useEffect(() => {
     if (!db) return
     
@@ -74,7 +69,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pb-32 bg-[#120108]">
-      {/* Header */}
       <header className="px-5 pt-10 pb-6 flex justify-between items-start max-w-4xl mx-auto">
         <div className="flex flex-col gap-1">
           <p className="text-[#00F0FF] text-[10px] font-bold uppercase tracking-[0.3em]">Bienvenido a</p>

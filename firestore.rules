@@ -2,28 +2,18 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Funciones de ayuda
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
     function isAdmin() {
-      return isSignedIn() && (
+      return request.auth != null && (
         request.auth.token.email == "arrozitocarlos1@gmail.com" || 
         request.auth.token.email == "carlitosnajdarg@gmail.com"
       );
     }
 
-    // Reglas para la colección de menú
     match /menu/{itemId} {
-      // Cualquier persona puede ver el menú
       allow read: if true;
-      // Solo los admins pueden crear, editar o borrar productos
       allow write: if isAdmin();
     }
 
-    // Reglas para categorías y otros (por si se usan en el futuro)
     match /categories/{categoryId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -34,9 +24,8 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Reglas para propinas y calificaciones
     match /tips/{tipId} {
-      allow create: if isSignedIn();
+      allow create: if request.auth != null;
       allow read: if isAdmin();
     }
 

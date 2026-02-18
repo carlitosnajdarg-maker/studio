@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -42,12 +43,19 @@ export default function AdminPage() {
     try {
       await signInWithPopup(auth, provider)
     } catch (error: any) {
-      console.error("Login error:", error)
+      console.error("Login error details:", error)
+      
+      let errorMessage = "No se pudo iniciar sesión con Google."
+      
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = "Este dominio no está autorizado. Copia la URL de tu navegador (sin https://) y pégala en Authentication > Settings > Authorized Domains en tu consola de Firebase."
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "La ventana de inicio de sesión se cerró. Inténtalo de nuevo."
+      }
+
       toast({
         title: "Error de conexión",
-        description: error.message.includes("authorizedDomains") 
-          ? "Este dominio no está autorizado en la consola de Firebase. Revisa el paso de 'Authorized Domains'." 
-          : "No se pudo iniciar sesión con Google.",
+        description: errorMessage,
         variant: "destructive"
       })
     }
