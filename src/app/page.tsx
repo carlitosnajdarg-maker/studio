@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 
+// Menú Digital Mr. Smith - Mejor Bar Pool de la Costa
 const CATEGORIES = ["Todos", "Tragos", "Bebidas c/ Alcohol", "Bebidas s/ Alcohol", "Comidas", "Fichas"]
 
 export default function Home() {
@@ -99,7 +100,7 @@ export default function Home() {
                 <div className="w-full space-y-3">
                   <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
                     <p className="text-[10px] text-blue-400 font-bold flex items-center gap-1 uppercase mb-2">
-                      <Globe className="w-3 h-3" /> URL del Menú
+                      <Globe className="w-3 h-3" /> URL del Menú (Hosting)
                     </p>
                     <Input 
                       value={publicUrl} 
@@ -109,7 +110,7 @@ export default function Home() {
                     />
                     {isDevUrl && (
                       <p className="text-[9px] text-yellow-500 mt-2 leading-tight flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> Esta URL es privada. Pega tu URL de Hosting para imprimir el QR real.
+                        <AlertCircle className="w-3 h-3" /> Esta es tu URL privada de trabajo. Usa la de App Hosting para el bar.
                       </p>
                     )}
                   </div>
