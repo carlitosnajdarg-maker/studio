@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { QrCode, Settings, Loader2, AlertCircle } from "lucide-react"
+import { QrCode, Settings, Loader2, AlertCircle, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
@@ -38,6 +38,7 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      // Intentamos detectar si es una URL de dev o prod
       setPublicUrl(window.location.origin)
     }
   }, [])
@@ -92,19 +93,23 @@ export default function Home() {
                 <div className="bg-white p-4 rounded-2xl">
                   <QRCodeSVG value={publicUrl} size={180} />
                 </div>
+                
                 {isDevUrl && userIsAdmin && (
                   <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex flex-col gap-2">
-                    <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 uppercase"><AlertCircle className="w-3 h-3" /> ¡Aviso!</p>
-                    <p className="text-[10px] text-white/80 leading-tight">Estás usando una URL de desarrollo privada. Los clientes no podrán verla. Despliega tu app para obtener la URL pública (ej: web.app) y pégala aquí debajo para generar un QR válido:</p>
+                    <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 uppercase"><AlertCircle className="w-3 h-3" /> ¡Atención!</p>
+                    <p className="text-[10px] text-white/80 leading-tight">La URL de esta "Workstation" es privada. Cuando despliegues tu app a producción, pega aquí la URL de Hosting (ej: .web.app) para generar el QR que verán los clientes:</p>
                     <Input 
                       value={publicUrl} 
                       onChange={(e) => setPublicUrl(e.target.value)} 
-                      placeholder="https://tu-bar.web.app" 
+                      placeholder="https://mrsmith.web.app" 
                       className="h-8 text-[10px] bg-black/40 border-white/10"
                     />
                   </div>
                 )}
-                <p className="text-center text-[10px] text-[#B0B0B0] px-2">Escanea para acceder al mejor menú de la costa.</p>
+                
+                <p className="text-center text-[10px] text-[#B0B0B0] px-2 flex items-center gap-2">
+                  <Info className="w-3 h-3" /> Escanea para entrar al mejor bar pool.
+                </p>
               </div>
             </DialogContent>
           </Dialog>
@@ -117,7 +122,7 @@ export default function Home() {
         {loading ? (
           <div className="py-24 text-center flex flex-col items-center gap-4">
             <Loader2 className="w-10 h-10 text-[#FF008A] animate-spin" />
-            <p className="text-[#FF008A] font-bold uppercase tracking-widest text-xs">Cargando...</p>
+            <p className="text-[#FF008A] font-bold uppercase tracking-widest text-xs">Abriendo el bar...</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">

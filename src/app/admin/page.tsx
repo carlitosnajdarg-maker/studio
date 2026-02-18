@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useAuth, useFirestore, useUser, useMemoFirebase, useCollection } from "@/firebase"
 import { signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth"
-import { isAdmin, isOwner, isAuthorized } from "@/lib/admin-config"
+import { isAdmin, isOwner } from "@/lib/admin-config"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, Clock, Star, Users, UserCircle, Edit2, Upload, Loader2, Info } from "lucide-react"
+import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, Clock, Star, Users, UserCircle, Edit2, Upload, Loader2, Info, Copy } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -54,35 +54,35 @@ export default function AdminPage() {
   const isActualAdmin = isAdmin(user?.email) || staffProfile?.role === 'Gerente' || isActualOwner
 
   useEffect(() => {
-    if (user && (isAuthorized(user.email) || staffProfile) && db) {
+    if (user && db) {
       const q = query(collection(db, "menu"), orderBy("createdAt", "desc"))
       const unsubscribe = onSnapshot(q, (snapshot) => {
         setMenuItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
       })
       return () => unsubscribe()
     }
-  }, [user, db, staffProfile])
+  }, [user, db])
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider()
     try {
       await signInWithPopup(auth, provider)
     } catch (error: any) {
-      toast({ title: "Error", description: "Verifica que el dominio esté autorizado en la consola de Firebase.", variant: "destructive" })
+      toast({ title: "Error de dominio", description: "Debes autorizar este dominio en la consola de Firebase.", variant: "destructive" })
     }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      if (file.size > 1024 * 1024) { // 1MB limit for Base64 efficiency
-        toast({ title: "Archivo muy pesado", description: "Por favor usa una imagen de menos de 1MB.", variant: "destructive" })
+      if (file.size > 800 * 1024) { // Limite 800KB para Base64
+        toast({ title: "Archivo grande", description: "Usa una imagen de menos de 800KB para mejor rendimiento.", variant: "destructive" })
         return
       }
       const reader = new FileReader()
       reader.onloadend = () => {
         setImageUrl(reader.result as string)
-        toast({ title: "Imagen lista", description: "Imagen cargada correctamente." })
+        toast({ title: "Imagen lista", description: "Foto cargada correctamente." })
       }
       reader.readAsDataURL(file)
     }
@@ -98,45 +98,30 @@ export default function AdminPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleEditStaff = (staff: any) => {
-    setEditingStaffId(staff.id)
-    setStaffName(staff.name)
-    setStaffEmail(staff.email)
-    setStaffRole(staff.role)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!db) return
-    const defaultImg = category === "Comidas" ? "https://picsum.photos/seed/food/400/500" : "https://picsum.photos/seed/drink/400/500"
-    
     try {
       const itemData = {
-        title, category, price: Number(price), description, imageUrl: imageUrl || defaultImg,
-        updatedAt: serverTimestamp(), updatedBy: user?.email
+        title, category, price: Number(price), description, imageUrl: imageUrl || "https://picsum.photos/seed/default/400/500",
+        updatedAt: serverTimestamp()
       }
 
       if (editingId) {
         await updateDoc(doc(db, "menu", editingId), itemData)
-        toast({ title: "Producto actualizado", description: `${title} ha sido modificado.` })
+        toast({ title: "Actualizado", description: `${title} modificado.` })
       } else {
-        await addDoc(collection(db, "menu"), {
-          ...itemData,
-          createdAt: new Date().toISOString(), createdBy: user?.email
-        })
-        toast({ title: "Producto añadido", description: `${title} ya está en el menú.` })
+        await addDoc(collection(db, "menu"), { ...itemData, createdAt: serverTimestamp() })
+        toast({ title: "Añadido", description: `${title} en el menú.` })
       }
-      
       resetMenuForm()
     } catch (e) {
-      toast({ title: "Error", description: "No tienes permiso para esta acción.", variant: "destructive" })
+      toast({ title: "Sin permiso", description: "Solo staff autorizado puede editar el menú.", variant: "destructive" })
     }
   }
 
   const resetMenuForm = () => {
-    setEditingId(null)
-    setTitle(""); setPrice(""); setDescription(""); setImageUrl("")
+    setEditingId(null); setTitle(""); setPrice(""); setDescription(""); setImageUrl("")
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
@@ -145,289 +130,214 @@ export default function AdminPage() {
     if (!db || !isActualAdmin) return
     try {
       const staffData = {
-        name: staffName, 
-        email: staffEmail.toLowerCase(), 
-        role: staffRole, 
-        updatedAt: serverTimestamp()
+        name: staffName, email: staffEmail.toLowerCase(), role: staffRole, updatedAt: serverTimestamp()
       }
-
       if (editingStaffId) {
         await updateDoc(doc(db, "staff_members", editingStaffId), staffData)
-        toast({ title: "Personal actualizado", description: `${staffName} modificado.` })
+        toast({ title: "Staff actualizado" })
       } else {
-        await addDoc(collection(db, "staff_members"), {
-          ...staffData,
-          createdAt: serverTimestamp(),
-          activeSession: null
-        })
-        toast({ title: "Personal registrado", description: `${staffName} añadido como ${staffRole}.` })
+        await addDoc(collection(db, "staff_members"), { ...staffData, createdAt: serverTimestamp(), activeSession: null })
+        toast({ title: "Staff registrado" })
       }
-      
       resetStaffForm()
     } catch (e) {
-      toast({ title: "Error", description: "Error al gestionar personal.", variant: "destructive" })
+      toast({ title: "Error", variant: "destructive" })
     }
   }
 
   const resetStaffForm = () => {
-    setEditingStaffId(null)
-    setStaffName(""); setStaffEmail(""); setStaffRole("Bartender")
+    setEditingStaffId(null); setStaffName(""); setStaffEmail(""); setStaffRole("Bartender")
   }
 
   const handleClockToggle = async () => {
-    if (!db || !user) return
-    const currentStaff = staffList?.find(s => s.email?.toLowerCase() === user.email?.toLowerCase())
-    if (!currentStaff) return
-
-    if (currentStaff.activeSession) {
-      const start = new Date(currentStaff.activeSession.startTime)
+    if (!db || !staffProfile) return
+    if (staffProfile.activeSession) {
+      const start = new Date(staffProfile.activeSession.startTime)
       const end = new Date()
-      const diffMs = end.getTime() - start.getTime()
-      const diffMins = Math.round(diffMs / 60000)
-
+      const diffMins = Math.round((end.getTime() - start.getTime()) / 60000)
       await addDoc(collection(db, "work_logs"), {
-        staffId: currentStaff.id, startTime: currentStaff.activeSession.startTime,
+        staffId: staffProfile.id, startTime: staffProfile.activeSession.startTime,
         endTime: end.toISOString(), durationMinutes: diffMins
       })
-      await updateDoc(doc(db, "staff_members", currentStaff.id), { activeSession: null })
-      toast({ title: "Salida registrada", description: `Turno de ${Math.floor(diffMins/60)}h ${diffMins%60}m finalizado.` })
+      await updateDoc(doc(db, "staff_members", staffProfile.id), { activeSession: null })
+      toast({ title: "Salida registrada", description: `${Math.floor(diffMins/60)}h ${diffMins%60}m trabajados.` })
     } else {
-      await updateDoc(doc(db, "staff_members", currentStaff.id), {
+      await updateDoc(doc(db, "staff_members", staffProfile.id), {
         activeSession: { startTime: new Date().toISOString() }
       })
-      toast({ title: "Entrada registrada", description: "¡Buen turno!" })
+      toast({ title: "Entrada registrada" })
     }
   }
 
   const getStaffStats = (staffId: string) => {
-    const staffRatings = allRatings?.filter(r => r.staffId === staffId) || []
-    const avgRating = staffRatings.length ? (staffRatings.reduce((a, b) => a + b.score, 0) / staffRatings.length).toFixed(1) : "N/A"
-    
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 7)
-    const weeklyMins = allLogs?.filter(l => l.staffId === staffId && new Date(l.startTime) > weekAgo)
+    const ratings = allRatings?.filter(r => r.staffId === staffId) || []
+    const avg = ratings.length ? (ratings.reduce((a, b) => a + b.score, 0) / ratings.length).toFixed(1) : "N/A"
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
+    const mins = allLogs?.filter(l => l.staffId === staffId && new Date(l.startTime) > weekAgo)
       .reduce((a, b) => a + (b.durationMinutes || 0), 0) || 0
-    
-    return { 
-      avgRating, 
-      displayTime: `${Math.floor(weeklyMins / 60)}h ${weeklyMins % 60}m`
-    }
+    return { avg, time: `${Math.floor(mins/60)}h ${mins%60}m` }
   }
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-[#120108] text-[#FF008A] font-bold animate-pulse uppercase tracking-widest">Verificando...</div>
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-[#120108] text-[#FF008A] font-bold">CARGANDO...</div>
 
-  if (!user || (!isAuthorized(user.email) && !staffProfile)) {
+  if (!user || (!isActualAdmin && !staffProfile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#120108] p-5">
-        <Card className="w-full max-w-md bg-[#1a020c] border-[#FF008A]/30 text-white shadow-2xl overflow-hidden">
-          <div className="h-2 bg-[#FF008A]"></div>
+        <Card className="w-full max-w-md bg-[#1a020c] border-[#FF008A]/30 text-white">
           <CardHeader className="text-center">
             <ShieldCheck className="w-12 h-12 text-[#FF008A] mx-auto mb-4" />
-            <CardTitle className="text-3xl font-headline uppercase">Acceso Personal</CardTitle>
-            <p className="text-[#B0B0B0] text-sm mt-2">{!user ? "Identifícate para gestionar el bar." : "Correo no autorizado."}</p>
+            <CardTitle className="text-2xl font-headline uppercase">Acceso Restringido</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-6 pb-10">
+          <CardContent className="flex flex-col gap-4 text-center">
+            <p className="text-sm text-[#B0B0B0]">Identifícate para gestionar el bar.</p>
             {!user ? (
-              <Button onClick={handleLogin} className="bg-[#FF008A] hover:bg-[#FF008A]/80 text-white font-bold h-14 text-lg rounded-xl">Entrar con Google</Button>
+              <Button onClick={handleLogin} className="bg-[#FF008A] h-14 font-bold text-lg">Entrar con Google</Button>
             ) : (
-              <Button onClick={() => signOut(auth)} variant="outline" className="border-white/20 text-white">Cerrar Sesión</Button>
+              <div className="space-y-4">
+                <p className="text-red-400 text-xs">El correo {user.email} no tiene permisos.</p>
+                <Button onClick={() => signOut(auth)} variant="outline">Cerrar Sesión</Button>
+              </div>
             )}
-            <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-[11px] text-[#B0B0B0] flex flex-col gap-2">
-               <p className="font-bold text-[#00F0FF] uppercase flex items-center gap-1"><Info className="w-3 h-3" /> IMPORTANTE:</p>
-               <p>Si el login falla, asegúrate de añadir el dominio de esta página en la consola de Firebase (Authentication &gt; Settings &gt; Authorized Domains).</p>
+            <div className="mt-4 p-4 bg-white/5 rounded-xl text-left">
+              <p className="text-[10px] font-bold text-[#00F0FF] uppercase mb-2">Paso 1: Autorizar Dominio</p>
+              <div className="flex gap-2 items-center bg-black/40 p-2 rounded border border-white/10">
+                <code className="text-[9px] flex-1 truncate">{typeof window !== 'undefined' ? window.location.hostname : ''}</code>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => {
+                  navigator.clipboard.writeText(window.location.hostname)
+                  toast({ title: "Copiado", description: "Pégalo en la consola de Firebase." })
+                }}><Copy className="w-3 h-3" /></Button>
+              </div>
+              <Link href="https://console.firebase.google.com/" target="_blank">
+                <Button variant="link" className="text-[#FF008A] text-[10px] p-0 h-auto mt-2">Ir a Consola Firebase →</Button>
+              </Link>
             </div>
-            <Link href="/" className="text-center text-xs text-[#00F0FF] hover:underline flex items-center justify-center gap-2"><ArrowLeft className="w-4 h-4" /> Volver al menú</Link>
+            <Link href="/" className="text-xs text-[#00F0FF] hover:underline mt-4 inline-block">← Volver al Menú</Link>
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  const roleLabel = isActualOwner ? 'Dueño' : (isActualAdmin ? 'Gerente' : staffProfile?.role || 'Staff')
-
   return (
-    <div className="min-h-screen bg-[#120108] text-white p-5 pb-24">
-      <header className="flex justify-between items-center mb-8 max-w-5xl mx-auto">
-        <div className="flex items-center gap-4">
-          <div className="bg-[#FF008A]/20 p-3 rounded-full border border-[#FF008A]/40">
-            {isActualOwner ? <ShieldCheck className="w-8 h-8 text-[#00F0FF]" /> : <UserCircle className="w-8 h-8 text-[#FF008A]" />}
+    <div className="min-h-screen bg-[#120108] text-white p-5 pb-24 max-w-5xl mx-auto">
+      <header className="flex justify-between items-center mb-8">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#FF008A]/20 p-2 rounded-full border border-[#FF008A]/40">
+            {isActualOwner ? <ShieldCheck className="w-6 h-6 text-[#00F0FF]" /> : <UserCircle className="w-6 h-6 text-[#FF008A]" />}
           </div>
           <div>
-            <h1 className={`text-xl font-headline font-bold uppercase tracking-tight ${isActualOwner ? 'text-[#00F0FF]' : 'text-[#FF008A]'}`}>
-              {roleLabel}
+            <h1 className="text-lg font-headline font-bold uppercase text-[#FF008A]">
+              {isActualOwner ? 'Panel Dueño' : (staffProfile?.role === 'Gerente' ? 'Gerencia' : 'Staff')}
             </h1>
-            <p className="text-[10px] text-[#B0B0B0] font-bold uppercase tracking-widest">{user.email}</p>
+            <p className="text-[9px] text-[#B0B0B0] font-bold uppercase">{user.email}</p>
           </div>
         </div>
         <div className="flex gap-2">
           {staffProfile && (
-             <Button 
-                onClick={handleClockToggle} 
-                variant={staffProfile.activeSession ? "destructive" : "default"}
-                className={!staffProfile.activeSession ? "bg-green-600 hover:bg-green-700" : ""}
-              >
-               <Clock className="w-4 h-4 mr-2" />
-               {staffProfile.activeSession ? "Marcar Salida" : "Marcar Entrada"}
-             </Button>
+            <Button onClick={handleClockToggle} variant={staffProfile.activeSession ? "destructive" : "default"} size="sm">
+              <Clock className="w-4 h-4 mr-2" />
+              {staffProfile.activeSession ? "Salida" : "Entrada"}
+            </Button>
           )}
-          <Button onClick={() => signOut(auth)} size="icon" variant="ghost" className="hover:bg-destructive/20 rounded-full h-10 w-10"><LogOut className="w-5 h-5" /></Button>
+          <Button onClick={() => signOut(auth)} size="icon" variant="ghost" className="rounded-full"><LogOut className="w-4 h-4" /></Button>
         </div>
       </header>
 
-      <Tabs defaultValue="menu" className="max-w-5xl mx-auto">
-        <TabsList className="grid w-full grid-cols-2 bg-[#1a020c] border border-white/10 mb-8 p-1">
-          <TabsTrigger value="menu" className="data-[state=active]:bg-[#FF008A] data-[state=active]:text-white font-bold uppercase text-xs">Menú del Bar</TabsTrigger>
-          <TabsTrigger value="staff" className="data-[state=active]:bg-[#00F0FF] data-[state=active]:text-[#120108] font-bold uppercase text-xs">Gestión Personal</TabsTrigger>
+      <Tabs defaultValue="menu">
+        <TabsList className="grid w-full grid-cols-2 bg-[#1a020c] mb-6">
+          <TabsTrigger value="menu" className="uppercase font-bold text-xs">Menú</TabsTrigger>
+          <TabsTrigger value="staff" className="uppercase font-bold text-xs">Personal</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="menu" className="space-y-8">
-          <Card className={`bg-[#1a020c] border-2 shadow-xl overflow-hidden ${editingId ? 'border-[#00F0FF]/50' : 'border-[#FF008A]/30'}`}>
+        <TabsContent value="menu" className="space-y-6">
+          <Card className="bg-[#1a020c] border-[#FF008A]/30">
             <CardHeader>
-              <CardTitle className={`flex items-center justify-between font-headline text-xl uppercase ${editingId ? 'text-[#00F0FF]' : 'text-[#FF008A]'}`}>
-                <span className="flex items-center gap-2">
-                  {editingId ? <Edit2 className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
-                  {editingId ? 'Editar Producto' : 'Nuevo Producto'}
-                </span>
-                {editingId && <Button variant="ghost" size="sm" onClick={resetMenuForm} className="text-white/40 hover:text-white">Cancelar</Button>}
+              <CardTitle className="text-lg font-headline uppercase text-[#FF008A] flex justify-between">
+                {editingId ? 'Editar Producto' : 'Nuevo Producto'}
+                {editingId && <Button variant="ghost" size="sm" onClick={resetMenuForm}>X</Button>}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSaveItem} className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className="text-[10px] uppercase text-[#B0B0B0]">Nombre</Label>
-                  <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Fernet con Coca" className="bg-white/5 h-12" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] uppercase text-[#B0B0B0]">Categoría</Label>
-                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-[#1a020c] border border-white/10 rounded-md h-12 px-3 text-sm">
-                    <option value="Tragos">Tragos</option><option value="Comidas">Comidas</option><option value="Fichas">Fichas</option>
-                    <option value="Bebidas c/ Alcohol">Bebidas c/ Alcohol</option><option value="Bebidas s/ Alcohol">Bebidas s/ Alcohol</option>
+                <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre</Label><Input value={title} onChange={e => setTitle(e.target.value)} required className="bg-white/5" /></div>
+                <div className="space-y-1"><Label className="text-[10px] uppercase">Categoría</Label>
+                  <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-md h-10 px-3 text-sm">
+                    <option value="Tragos">Tragos</option><option value="Bebidas c/ Alcohol">Bebidas c/ Alcohol</option><option value="Bebidas s/ Alcohol">Bebidas s/ Alcohol</option><option value="Comidas">Comidas</option><option value="Fichas">Fichas</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] uppercase text-[#B0B0B0]">Precio ($)</Label>
-                  <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="0" className="bg-white/5 h-12" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] uppercase text-[#B0B0B0]">Imagen</Label>
+                <div className="space-y-1"><Label className="text-[10px] uppercase">Precio ($)</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="bg-white/5" /></div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase">Foto</Label>
                   <div className="flex gap-2">
-                    <Input value={imageUrl && !imageUrl.startsWith('data:') ? imageUrl : ""} onChange={(e) => setImageUrl(e.target.value)} placeholder="URL o sube archivo" className="bg-white/5 h-12 flex-1" />
-                    <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} className="h-12 w-12 border-white/10 hover:bg-[#FF008A]/10">
-                      <Upload className="w-5 h-5 text-[#FF008A]" />
-                    </Button>
+                    <Input value={imageUrl.startsWith('data:') ? "" : imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="URL..." className="bg-white/5" />
+                    <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()}><Upload className="w-4 h-4" /></Button>
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                   </div>
                 </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label className="text-[10px] uppercase text-[#B0B0B0]">Descripción</Label>
-                  <Input value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Breve descripción..." className="bg-white/5 h-12" />
-                </div>
-                <Button type="submit" className={`md:col-span-2 font-bold h-12 uppercase ${editingId ? 'bg-[#00F0FF] text-[#120108]' : 'bg-[#FF008A]'}`}>
-                  {editingId ? 'Guardar Cambios' : 'Publicar Producto'}
-                </Button>
+                <div className="md:col-span-2 space-y-1"><Label className="text-[10px] uppercase">Descripción</Label><Input value={description} onChange={e => setDescription(e.target.value)} className="bg-white/5" /></div>
+                <Button type="submit" className="md:col-span-2 bg-[#FF008A] font-bold uppercase">{editingId ? 'Guardar Cambios' : 'Publicar'}</Button>
               </form>
             </CardContent>
           </Card>
 
-          <div className="grid gap-3">
-            {menuItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-3 bg-[#1a020c] rounded-xl border border-white/5">
-                <div className="flex items-center gap-4">
-                  <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-white/10 bg-black">
-                    <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
-                  </div>
-                  <div>
-                    <p className="font-bold">{item.title} <span className="text-[10px] text-[#FF008A] ml-2 uppercase opacity-60">[{item.category}]</span></p>
-                    <p className="text-[#00F0FF] font-bold text-xs">${item.price.toLocaleString()}</p>
-                  </div>
+          <div className="grid gap-2">
+            {menuItems.map(item => (
+              <div key={item.id} className="flex items-center justify-between p-2 bg-[#1a020c] rounded-lg border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="relative w-10 h-10 rounded overflow-hidden"><Image src={item.imageUrl} alt="" fill className="object-cover" /></div>
+                  <div><p className="text-sm font-bold">{item.title}</p><p className="text-[10px] text-[#00F0FF]">${item.price}</p></div>
                 </div>
                 <div className="flex gap-1">
-                  <Button onClick={() => handleEditItem(item)} variant="ghost" size="icon" className="text-white/20 hover:text-[#00F0FF]"><Edit2 className="w-4 h-4" /></Button>
-                  {isActualAdmin && (
-                    <Button onClick={async () => { if(confirm("¿Eliminar producto?")) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="text-white/20 hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
-                  )}
+                  <Button onClick={() => handleEditItem(item)} variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-[#00F0FF]"><Edit2 className="w-3 h-3" /></Button>
+                  {isActualAdmin && <Button onClick={async () => { if(confirm("¿Eliminar?")) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-red-500"><Trash2 className="w-3 h-3" /></Button>}
                 </div>
               </div>
             ))}
           </div>
         </TabsContent>
 
-        <TabsContent value="staff" className="space-y-8">
+        <TabsContent value="staff" className="space-y-6">
           {isActualAdmin && (
-            <Card className={`bg-[#1a020c] border-2 shadow-xl ${editingStaffId ? 'border-[#00F0FF]/50' : 'border-white/10'}`}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between font-headline text-xl uppercase text-[#00F0FF]">
-                  <span className="flex items-center gap-2">
-                    {editingStaffId ? <Edit2 className="w-6 h-6" /> : <Users className="w-6 h-6" />}
-                    {editingStaffId ? 'Editar Miembro' : 'Gestión de Staff'}
-                  </span>
-                  {editingStaffId && <Button variant="ghost" size="sm" onClick={resetStaffForm} className="text-white/40 hover:text-white">Cancelar</Button>}
-                </CardTitle>
-              </CardHeader>
+            <Card className="bg-[#1a020c] border-[#00F0FF]/30">
+              <CardHeader><CardTitle className="text-lg font-headline uppercase text-[#00F0FF]">{editingStaffId ? 'Editar Staff' : 'Nuevo Staff'}</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleSaveStaff} className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase text-[#B0B0B0]">Nombre</Label>
-                    <Input value={staffName} onChange={(e) => setStaffName(e.target.value)} required placeholder="Nombre completo" className="bg-white/5 h-12" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase text-[#B0B0B0]">Email Google</Label>
-                    <Input type="email" value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)} required placeholder="ejemplo@gmail.com" className="bg-white/5 h-12" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase text-[#B0B0B0]">Rol</Label>
-                    <select value={staffRole} onChange={(e) => setStaffRole(e.target.value)} className="w-full bg-[#1a020c] border border-white/10 rounded-md h-12 px-3">
-                      <option value="Bartender">Bartender</option>
-                      <option value="Mesero">Mesero</option>
-                      <option value="Seguridad">Seguridad</option>
-                      {isActualOwner && <option value="Dueño">Dueño</option>}
-                      {isActualOwner && <option value="Gerente">Gerente</option>}
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre</Label><Input value={staffName} onChange={e => setStaffName(e.target.value)} required className="bg-white/5" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Email Google</Label><Input value={staffEmail} onChange={e => setStaffEmail(e.target.value)} required className="bg-white/5" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Rol</Label>
+                    <select value={staffRole} onChange={e => setStaffRole(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-md h-10 px-3 text-sm">
+                      <option value="Bartender">Bartender</option><option value="Mesero">Mesero</option><option value="Seguridad">Seguridad</option>
+                      <option value="Gerente">Gerente</option>{isActualOwner && <option value="Dueño">Dueño</option>}
                     </select>
                   </div>
-                  <Button type="submit" className={`md:col-span-3 font-bold h-12 uppercase ${editingStaffId ? 'bg-[#FF008A]' : 'bg-[#00F0FF] text-[#120108]'}`}>
-                    {editingStaffId ? 'Guardar Cambios' : 'Registrar Nuevo Miembro'}
-                  </Button>
+                  <Button type="submit" className="md:col-span-3 bg-[#00F0FF] text-[#120108] font-bold uppercase">{editingStaffId ? 'Guardar Cambios' : 'Registrar'}</Button>
                 </form>
               </CardContent>
             </Card>
           )}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {staffList?.map((staff) => {
-              const { avgRating, displayTime } = getStaffStats(staff.id)
+            {staffList?.map(staff => {
+              const { avg, time } = getStaffStats(staff.id)
               return (
-                <Card key={staff.id} className="bg-[#1a020c] border-white/5 relative">
-                  <CardContent className="pt-6">
+                <Card key={staff.id} className="bg-[#1a020c] border-white/5 overflow-hidden">
+                  <CardContent className="pt-4">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-bold text-lg">{staff.name}</p>
-                          {isActualAdmin && (
-                            <button onClick={() => handleEditStaff(staff)} className="text-white/20 hover:text-[#00F0FF]">
-                              <Edit2 className="w-3 h-3" />
-                            </button>
-                          )}
+                          <p className="font-bold">{staff.name}</p>
+                          {isActualAdmin && <button onClick={() => { setEditingStaffId(staff.id); setStaffName(staff.name); setStaffEmail(staff.email); setStaffRole(staff.role); }} className="text-white/20 hover:text-[#00F0FF]"><Edit2 className="w-3 h-3" /></button>}
                         </div>
-                        <p className={`text-[10px] font-bold uppercase tracking-widest ${staff.role === 'Dueño' ? 'text-[#00F0FF]' : (staff.role === 'Gerente' ? 'text-yellow-400' : 'text-[#FF008A]')}`}>
-                          {staff.role}
-                        </p>
+                        <p className="text-[9px] font-bold text-[#FF008A] uppercase">{staff.role}</p>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1 text-yellow-500 font-bold"><Star className="w-3 h-3 fill-yellow-500" /> {avgRating}</div>
-                        {staff.activeSession && <div className="text-[10px] bg-green-500/20 text-green-500 px-2 py-0.5 rounded-full animate-pulse font-bold">En turno</div>}
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold"><Star className="w-3 h-3 fill-current" /> {avg}</div>
+                        {staff.activeSession && <div className="text-[8px] bg-green-500/20 text-green-500 px-2 rounded-full animate-pulse">EN TURNO</div>}
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-4">
-                      <div className="text-center">
-                        <p className="text-[9px] uppercase text-[#B0B0B0] mb-1">Semana</p>
-                        <p className="text-xl font-headline font-bold text-[#FF008A]">{displayTime}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-[9px] uppercase text-[#B0B0B0] mb-1">Reseñas</p>
-                        <p className="text-xl font-headline font-bold text-[#00F0FF]">
-                          {allRatings?.filter(r => r.staffId === staff.id).length || 0}
-                        </p>
-                      </div>
+                    <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-3">
+                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0]">Semana</p><p className="font-headline font-bold text-[#FF008A]">{time}</p></div>
+                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0]">Reseñas</p><p className="font-headline font-bold text-[#00F0FF]">{allRatings?.filter(r => r.staffId === staff.id).length || 0}</p></div>
                     </div>
                   </CardContent>
                 </Card>
