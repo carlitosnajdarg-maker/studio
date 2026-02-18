@@ -15,8 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog"
-import { QrCode, Settings, Loader2, AlertCircle, Info } from "lucide-react"
+import { QrCode, Settings, Loader2, AlertCircle, Info, ExternalLink, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
@@ -88,27 +89,34 @@ export default function Home() {
             <DialogContent className="bg-[#1a020c] border-[#FF008A]/30 text-white max-w-[350px] rounded-3xl p-6">
               <DialogHeader>
                 <DialogTitle className="text-center font-headline text-xl text-[#FF008A] uppercase tracking-widest">Compartir Menú</DialogTitle>
+                <DialogDescription className="text-center text-[10px] text-white/50 uppercase font-bold tracking-tight">Crea el QR para tus mesas</DialogDescription>
               </DialogHeader>
               <div className="flex flex-col items-center gap-4 py-4">
-                <div className="bg-white p-4 rounded-2xl">
+                <div className="bg-white p-4 rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
                   <QRCodeSVG value={publicUrl} size={180} />
                 </div>
                 
-                {isDevUrl && userIsAdmin && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex flex-col gap-2">
-                    <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 uppercase"><AlertCircle className="w-3 h-3" /> ¡Atención!</p>
-                    <p className="text-[10px] text-white/80 leading-tight">Esta URL es privada. Para generar el QR real de tus mesas, pega aquí la URL de Hosting cuando despliegues:</p>
+                <div className="w-full space-y-3">
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                    <p className="text-[10px] text-blue-400 font-bold flex items-center gap-1 uppercase mb-2">
+                      <Globe className="w-3 h-3" /> URL del Menú
+                    </p>
                     <Input 
                       value={publicUrl} 
                       onChange={(e) => setPublicUrl(e.target.value)} 
                       placeholder="https://mrsmith.web.app" 
-                      className="h-8 text-[10px] bg-black/40 border-white/10"
+                      className="h-9 text-[11px] bg-black/40 border-white/20 text-white font-mono"
                     />
+                    {isDevUrl && (
+                      <p className="text-[9px] text-yellow-500 mt-2 leading-tight flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> Esta URL es privada. Pega tu URL de Hosting para imprimir el QR real.
+                      </p>
+                    )}
                   </div>
-                )}
+                </div>
                 
                 <p className="text-center text-[10px] text-[#B0B0B0] px-2 flex items-center gap-2">
-                  <Info className="w-3 h-3" /> Escanea para entrar al mejor bar pool.
+                  <Info className="w-3 h-3 text-[#00F0FF]" /> Escanea para entrar al mejor bar pool.
                 </p>
               </div>
             </DialogContent>

@@ -6,13 +6,13 @@ import { useAuth, useFirestore, useUser, useMemoFirebase, useCollection } from "
 import { signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth"
 import { isAdmin, isOwner } from "@/lib/admin-config"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp, setDoc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Copy, Play, Pause, Square, UserPlus, Settings2, Timer } from "lucide-react"
+import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Copy, Play, Pause, Square, UserPlus, Settings2, Timer, Globe, CheckCircle2, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -59,12 +59,11 @@ export default function AdminPage() {
   const logsQuery = useMemoFirebase(() => query(collection(db, "work_logs"), orderBy("startTime", "desc")), [db])
   const { data: allLogs } = useCollection(logsQuery)
 
-  // Determine actual role based on email and profile
+  // Determine actual role
   const staffProfile = staffList?.find(s => s.email?.toLowerCase() === user?.email?.toLowerCase())
   const isActualOwner = isOwner(user?.email) || staffProfile?.role === 'Dueño'
   const isActualAdmin = isAdmin(user?.email) || staffProfile?.role === 'Gerente' || isActualOwner
 
-  // Update timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (staffProfile?.activeSession && staffProfile.activeSession.status === "active") {
@@ -181,7 +180,6 @@ export default function AdminPage() {
     }
   }
 
-  // --- Clock Logic (Start/Pause/Finish) ---
   const handleStartWork = async () => {
     if (!db || !staffProfile) return
     await updateDoc(doc(db, "staff_members", staffProfile.id), {
@@ -273,15 +271,21 @@ export default function AdminPage() {
                 <Button onClick={() => signOut(auth)} variant="outline">Cerrar Sesión</Button>
               </div>
             )}
-            <div className="mt-4 p-4 bg-white/5 rounded-xl text-left border border-white/10">
-              <p className="text-[10px] font-bold text-[#00F0FF] uppercase mb-2">Dominio para Autorizar:</p>
+            <div className="mt-4 p-4 bg-[#00F0FF]/5 rounded-xl text-left border border-[#00F0FF]/20">
+              <p className="text-[10px] font-bold text-[#00F0FF] uppercase mb-2 flex items-center gap-2">
+                <Globe className="w-3 h-3" /> Paso 1: Autorizar Dominio
+              </p>
+              <p className="text-[10px] text-white/60 mb-2 leading-tight">Copia esto en Authentication > Settings > Authorized domains:</p>
               <div className="flex gap-2 items-center bg-black/40 p-2 rounded border border-white/10">
-                <code className="text-[9px] flex-1 truncate">{typeof window !== 'undefined' ? window.location.hostname : ''}</code>
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => {
+                <code className="text-[9px] flex-1 truncate text-white">{typeof window !== 'undefined' ? window.location.hostname : ''}</code>
+                <Button size="icon" variant="ghost" className="h-6 w-6 text-[#00F0FF]" onClick={() => {
                   navigator.clipboard.writeText(window.location.hostname)
                   toast({ title: "Copiado" })
                 }}><Copy className="w-3 h-3" /></Button>
               </div>
+              <Link href="https://console.firebase.google.com/" target="_blank">
+                <Button variant="link" className="text-[9px] text-[#00F0FF] h-auto p-0 mt-2 uppercase font-bold">Ir a Consola Firebase <ExternalLink className="w-2 h-2 ml-1" /></Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -291,20 +295,44 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#120108] text-white p-5 pb-32 max-w-5xl mx-auto font-body">
-      <header className="flex justify-between items-center mb-8 bg-[#1a020c] p-4 rounded-2xl border border-white/5">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-[#1a020c] p-4 rounded-2xl border border-white/5">
         <div className="flex items-center gap-3">
           <div className="bg-[#FF008A]/20 p-2 rounded-full border border-[#FF008A]/40">
             {isActualOwner ? <ShieldCheck className="w-6 h-6 text-[#00F0FF]" /> : <UserCircle className="w-6 h-6 text-[#FF008A]" />}
           </div>
           <div>
             <h1 className="text-sm font-headline font-bold uppercase text-[#FF008A]">
-              {isActualOwner ? 'Panel Dueño' : (staffProfile?.role === 'Gerente' ? 'Panel Gerencia' : 'Panel Staff')}
+              {isActualOwner ? 'Dueño Mr. Smith' : (staffProfile?.role === 'Gerente' ? 'Gerencia Mr. Smith' : 'Panel Staff')}
             </h1>
-            <p className="text-[10px] text-[#B0B0B0] font-bold truncate max-w-[150px]">{user.email}</p>
+            <p className="text-[10px] text-[#B0B0B0] font-bold">{user.email}</p>
           </div>
         </div>
-        <Button onClick={() => signOut(auth)} size="icon" variant="ghost" className="rounded-full hover:bg-white/5"><LogOut className="w-4 h-4" /></Button>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <Button onClick={() => signOut(auth)} size="sm" variant="ghost" className="rounded-full hover:bg-white/5 text-white/60"><LogOut className="w-4 h-4 mr-2" /> Salir</Button>
+        </div>
       </header>
+
+      {/* SECCION DE PUBLICACION (SOLO DUEÑO) */}
+      {isActualOwner && (
+        <Card className="bg-[#1a020c] border-[#00F0FF]/20 mb-8 border-dashed">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-headline uppercase text-[#00F0FF] flex items-center gap-2">
+              <Globe className="w-4 h-4" /> ¿Cómo hacer pública la web?
+            </CardTitle>
+            <CardDescription className="text-[10px] text-white/50">Sigue estos pasos para que tus clientes vean el menú desde sus celulares.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 text-[11px]">
+            <div className="p-3 bg-white/5 rounded-lg border border-white/10">
+              <p className="font-bold text-[#FF008A] mb-1">1. URL DE PRODUCCIÓN</p>
+              <p className="leading-tight">Una vez que publiques tu app en Hosting, recibirás una URL como <span className="text-[#00F0FF]">mrsmith.web.app</span>. Esa es la URL que debes usar para el QR.</p>
+            </div>
+            <div className="p-3 bg-white/5 rounded-lg border border-white/10">
+              <p className="font-bold text-[#FF008A] mb-1">2. QR PARA MESAS</p>
+              <p className="leading-tight">En la página principal, haz clic en el icono de QR y pega tu URL de Hosting. El QR se actualizará para que tus clientes entren directo.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* SECCION DE CONTADOR / RELOJ */}
       {staffProfile && (
@@ -317,34 +345,34 @@ export default function AdminPage() {
           <CardContent>
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <div className="text-center sm:text-left">
-                <p className="text-[10px] uppercase text-[#B0B0B0] font-bold mb-1">Tiempo de Turno</p>
+                <p className="text-[10px] uppercase text-[#B0B0B0] font-bold mb-1">Tiempo Transcurrido</p>
                 <p className="text-4xl font-headline font-bold tracking-widest text-white">{elapsedTime}</p>
                 {staffProfile.activeSession?.status === "paused" && (
-                  <p className="text-[10px] text-yellow-500 font-bold uppercase animate-pulse mt-1">⏸ En Descanso</p>
+                  <p className="text-[10px] text-yellow-500 font-bold uppercase animate-pulse mt-1">⏸ En Descanso (Pausado)</p>
                 )}
               </div>
               
               <div className="flex gap-3 w-full sm:w-auto">
                 {!staffProfile.activeSession ? (
                   <Button onClick={handleStartWork} className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 h-16 px-8 font-bold text-lg uppercase">
-                    <Play className="w-6 h-6 mr-2" /> Iniciar
+                    <Play className="w-6 h-6 mr-2" /> Iniciar Turno
                   </Button>
                 ) : (
                   <>
                     <Button 
                       onClick={handlePauseWork} 
                       variant="outline" 
-                      className="flex-1 sm:flex-none border-yellow-500 text-yellow-500 h-16 px-6 font-bold uppercase"
+                      className="flex-1 sm:flex-none border-yellow-500 text-yellow-500 h-16 px-6 font-bold uppercase hover:bg-yellow-500/10"
                     >
                       {staffProfile.activeSession.status === 'paused' ? <Play className="w-5 h-5 mr-2" /> : <Pause className="w-5 h-5 mr-2" />}
-                      {staffProfile.activeSession.status === 'paused' ? 'Reanudar' : 'Pausa'}
+                      {staffProfile.activeSession.status === 'paused' ? 'Reanudar' : 'Pausar'}
                     </Button>
                     <Button 
                       onClick={handleFinishWork} 
                       variant="destructive" 
                       className="flex-1 sm:flex-none h-16 px-6 font-bold uppercase"
                     >
-                      <Square className="w-5 h-5 mr-2" /> Terminar
+                      <Square className="w-5 h-5 mr-2" /> Finalizar
                     </Button>
                   </>
                 )}
@@ -356,16 +384,16 @@ export default function AdminPage() {
 
       <Tabs defaultValue="menu">
         <TabsList className="grid grid-cols-3 h-auto w-full bg-[#1a020c] mb-6 p-1 border border-white/5 gap-1">
-          <TabsTrigger value="menu" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-[#FF008A]">Menú</TabsTrigger>
-          <TabsTrigger value="staff" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-[#00F0FF] data-[state=active]:text-[#120108]">Staff</TabsTrigger>
-          {isActualOwner && <TabsTrigger value="roles" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-purple-600">Niveles</TabsTrigger>}
+          <TabsTrigger value="menu" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-[#FF008A]">Menú Digital</TabsTrigger>
+          <TabsTrigger value="staff" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-[#00F0FF] data-[state=active]:text-[#120108]">Gestión Staff</TabsTrigger>
+          {isActualOwner && <TabsTrigger value="roles" className="uppercase font-bold text-[10px] py-2.5 data-[state=active]:bg-purple-600">Config Niveles</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="menu" className="space-y-6">
           <Card className="bg-[#1a020c] border-[#FF008A]/30">
             <CardHeader>
               <CardTitle className="text-lg font-headline uppercase text-[#FF008A] flex justify-between items-center">
-                {editingId ? 'Editar Producto' : 'Nuevo Ítem'}
+                {editingId ? 'Editar Producto' : 'Publicar Nuevo Producto'}
                 {editingId && <Button variant="ghost" size="sm" onClick={resetMenuForm} className="text-white/40">Cancelar</Button>}
               </CardTitle>
             </CardHeader>
@@ -379,16 +407,16 @@ export default function AdminPage() {
                 </div>
                 <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Precio ($)</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="bg-white/5 border-white/10" /></div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase text-[#B0B0B0]">Imagen</Label>
+                  <Label className="text-[10px] uppercase text-[#B0B0B0]">Foto del Producto</Label>
                   <div className="flex gap-2">
                     <Input value={imageUrl.startsWith('data:') ? "Foto cargada" : imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." className="bg-white/5 border-white/10" />
                     <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} className="shrink-0 border-[#00F0FF]/30 text-[#00F0FF]"><Upload className="w-4 h-4" /></Button>
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                   </div>
                 </div>
-                <div className="md:col-span-2 space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Descripción</Label><Input value={description} onChange={e => setDescription(e.target.value)} className="bg-white/5 border-white/10" /></div>
+                <div className="md:col-span-2 space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Descripción Corta</Label><Input value={description} onChange={e => setDescription(e.target.value)} className="bg-white/5 border-white/10" /></div>
                 <Button type="submit" className="md:col-span-2 bg-[#FF008A] hover:bg-[#FF008A]/80 font-bold uppercase py-6 neon-glow-magenta">
-                  {editingId ? 'Guardar Cambios' : 'Publicar Producto'}
+                  {editingId ? 'Actualizar Producto' : 'Añadir al Menú'}
                 </Button>
               </form>
             </CardContent>
@@ -418,12 +446,12 @@ export default function AdminPage() {
         <TabsContent value="staff" className="space-y-6">
           {isActualAdmin && (
             <Card className="bg-[#1a020c] border-[#00F0FF]/30">
-              <CardHeader><CardTitle className="text-lg font-headline uppercase text-[#00F0FF]">{editingStaffId ? 'Editar Personal' : 'Nuevo Miembro'}</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg font-headline uppercase text-[#00F0FF]">{editingStaffId ? 'Editar Miembro del Staff' : 'Registrar Nuevo Staff'}</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleSaveStaff} className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Nombre</Label><Input value={staffName} onChange={e => setStaffName(e.target.value)} required className="bg-white/5 border-white/10" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Email Google</Label><Input value={staffEmail} onChange={e => setStaffEmail(e.target.value)} required className="bg-white/5 border-white/10" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Nivel</Label>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Nombre Completo</Label><Input value={staffName} onChange={e => setStaffName(e.target.value)} required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Email de Google</Label><Input value={staffEmail} onChange={e => setStaffEmail(e.target.value)} required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase text-[#B0B0B0]">Rango / Nivel</Label>
                     <select value={staffRole} onChange={e => setStaffRole(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
                       <option value="Bartender">Bartender</option><option value="Mesero">Mesero</option><option value="Gerente">Gerente</option>
                       {isActualOwner && <option value="Dueño">Dueño</option>}
@@ -431,7 +459,7 @@ export default function AdminPage() {
                     </select>
                   </div>
                   <Button type="submit" className="md:col-span-3 bg-[#00F0FF] text-[#120108] font-bold uppercase py-6 neon-glow-cyan">
-                    {editingStaffId ? 'Guardar Cambios' : 'Registrar Staff'}
+                    {editingStaffId ? 'Guardar Cambios' : 'Dar de Alta al Staff'}
                   </Button>
                 </form>
               </CardContent>
@@ -457,14 +485,14 @@ export default function AdminPage() {
                         <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold"><Star className="w-3.5 h-3.5 fill-current" /> {avg}</div>
                         {session && (
                           <div className={`text-[8px] ${session.status === 'paused' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'} px-2 py-0.5 rounded-full mt-1 font-bold`}>
-                            {session.status === 'paused' ? 'EN PAUSA' : 'ACTIVO'}
+                            {session.status === 'paused' ? 'EN PAUSA' : 'EN TURNO'}
                           </div>
                         )}
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-4">
-                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0] font-bold">Semana</p><p className="font-headline font-bold text-[#FF008A] text-sm">{time}</p></div>
-                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0] font-bold">Reseñas</p><p className="font-headline font-bold text-[#00F0FF] text-sm">{allRatings?.filter(r => r.staffId === staff.id).length || 0}</p></div>
+                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0] font-bold">Tiempo Semana</p><p className="font-headline font-bold text-[#FF008A] text-sm">{time}</p></div>
+                      <div className="text-center"><p className="text-[8px] uppercase text-[#B0B0B0] font-bold">Reseñas Clientes</p><p className="font-headline font-bold text-[#00F0FF] text-sm">{allRatings?.filter(r => r.staffId === staff.id).length || 0}</p></div>
                     </div>
                   </CardContent>
                 </Card>
@@ -476,16 +504,16 @@ export default function AdminPage() {
         {isActualOwner && (
           <TabsContent value="roles" className="space-y-6">
             <Card className="bg-[#1a020c] border-purple-600/30">
-              <CardHeader><CardTitle className="text-lg font-headline uppercase text-purple-600">Crear Rango de Personal</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg font-headline uppercase text-purple-600">Crear Rangos del Bar</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleCreateRole} className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre del Rango</Label><Input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} placeholder="Ej: Seguridad, Limpieza" required className="bg-white/5 border-white/10" /></div>
-                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nivel de Poder</Label>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre del Puesto</Label><Input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} placeholder="Ej: DJ, Seguridad" required className="bg-white/5 border-white/10" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nivel de Acceso</Label>
                     <select value={newRoleLevel} onChange={e => setNewRoleLevel(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-10 px-3 text-sm text-white">
-                      <option value="Staff">Personal (Solo Reloj)</option><option value="Gerente">Gerencia (Editar Menú)</option><option value="Dueño">Dueño (Acceso Total)</option>
+                      <option value="Staff">Personal (Solo Reloj)</option><option value="Gerente">Gerencia (Editar Menú)</option><option value="Dueño">Dueño (Control Total)</option>
                     </select>
                   </div>
-                  <Button type="submit" className="md:col-span-2 bg-purple-600 hover:bg-purple-700 font-bold uppercase"><Plus className="w-4 h-4 mr-2" /> Crear Nivel</Button>
+                  <Button type="submit" className="md:col-span-2 bg-purple-600 hover:bg-purple-700 font-bold uppercase"><Plus className="w-4 h-4 mr-2" /> Guardar Rango</Button>
                 </form>
               </CardContent>
             </Card>
