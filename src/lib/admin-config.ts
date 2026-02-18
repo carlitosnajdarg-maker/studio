@@ -1,19 +1,20 @@
+
 /**
  * @fileOverview Configuración de jerarquía y permisos del bar.
  */
 
-// DUEÑO: Control absoluto
+// DUEÑO: Control absoluto (Bootstrap)
 export const OWNER_WHITELIST = [
   "carlitosnajdarg@gmail.com"
 ];
 
-// GERENTES: Control administrativo
+// GERENTES: Control administrativo (Bootstrap)
 export const ADMIN_WHITELIST = [
   "arrozitocarlos1@gmail.com",
   "dueno@mrsmithbarpool.com"
 ];
 
-// MODERADORES ESTÁTICOS
+// MODERADORES ESTÁTICOS (Bootstrap)
 export const STATIC_MOD_WHITELIST = [
   "staff@mrsmithbarpool.com"
 ];
