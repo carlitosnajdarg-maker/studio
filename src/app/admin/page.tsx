@@ -1,9 +1,8 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth, googleProvider, db, isConfigValid } from "@/lib/firebase"
-import { signInWithPopup, onAuthStateChanged, User, signOut } from "firebase/auth"
+import { useAuth, useFirestore, useUser } from "@/firebase"
+import { signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth"
 import { isAdmin } from "@/lib/admin-config"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -11,12 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, AlertTriangle, Sparkles, Database } from "lucide-react"
+import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, Sparkles, Database } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminPage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const auth = useAuth()
+  const db = useFirestore()
+  const { user, isUserLoading } = useUser()
   const [menuItems, setMenuItems] = useState<any[]>([])
   const { toast } = useToast()
 
@@ -27,18 +27,6 @@ export default function AdminPage() {
   const [description, setDescription] = useState("")
 
   useEffect(() => {
-    if (!auth) {
-      setLoading(false)
-      return
-    }
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser)
-      setLoading(false)
-    })
-    return () => unsubscribe()
-  }, [])
-
-  useEffect(() => {
     if (user && isAdmin(user.email) && db) {
       const q = query(collection(db, "menu"), orderBy("createdAt", "desc"))
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -47,34 +35,21 @@ export default function AdminPage() {
       })
       return () => unsubscribe()
     }
-  }, [user])
+  }, [user, db])
 
   const handleLogin = async () => {
-    if (!auth) {
-      toast({
-        title: "Error",
-        description: "Servicio de autenticación no disponible.",
-        variant: "destructive"
-      })
-      return
-    }
+    const provider = new GoogleAuthProvider()
     try {
-      await signInWithPopup(auth, googleProvider)
+      await signInWithPopup(auth, provider)
     } catch (error: any) {
       console.error("Login error:", error)
-      if (error.code === 'auth/popup-blocked') {
-        toast({
-          title: "Ventana bloqueada",
-          description: "Tu navegador bloqueó el inicio de sesión. Haz clic en el icono de la barra de direcciones para permitir ventanas emergentes y vuelve a intentarlo.",
-          variant: "destructive"
-        })
-      } else {
-        toast({
-          title: "Error de conexión",
-          description: error.message || "No se pudo conectar con Google.",
-          variant: "destructive"
-        })
-      }
+      toast({
+        title: "Error de conexión",
+        description: error.message.includes("authorizedDomains") 
+          ? "Este dominio no está autorizado en la consola de Firebase. Revisa el paso de 'Authorized Domains'." 
+          : "No se pudo iniciar sesión con Google.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -130,26 +105,7 @@ export default function AdminPage() {
     }
   }
 
-  if (!isConfigValid) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#120108] p-5">
-        <Card className="bg-[#1a020c] border-destructive/50 text-white max-w-md text-center shadow-[0_0_30px_rgba(255,0,0,0.1)]">
-          <CardHeader>
-            <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-2" />
-            <CardTitle className="text-xl font-headline uppercase">Firebase no configurado</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-[#B0B0B0] text-sm">Faltan las credenciales en el panel de Studio. Por favor, pega tu configuración de Firebase para activar la base de datos.</p>
-            <Link href="/" className="text-[#00F0FF] hover:underline flex items-center justify-center gap-2 text-xs uppercase font-bold">
-              <ArrowLeft className="w-4 h-4" /> Volver al menú público
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (loading) return (
+  if (isUserLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#120108]">
       <div className="text-[#FF008A] font-bold animate-pulse text-xl font-headline uppercase tracking-widest">Sincronizando...</div>
     </div>
@@ -167,7 +123,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-6 pb-10">
             <p className="text-[#B0B0B0] text-center text-sm px-4">
-              Ingresa con tu Gmail autorizado para gestionar el menú. Si el navegador bloquea la ventana, por favor permítela.
+              Ingresa con tu Gmail autorizado para gestionar el menú.
             </p>
             <Button onClick={handleLogin} className="bg-[#FF008A] hover:bg-[#FF008A]/80 text-white font-bold h-14 text-lg rounded-xl transition-all shadow-lg">
               Entrar con Google
@@ -191,7 +147,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent className="space-y-6 pb-10">
             <p className="text-[#B0B0B0] text-sm leading-relaxed">
-              El correo <span className="text-white font-bold">{user.email}</span> no está en la lista blanca de administradores.
+              El correo <span className="text-white font-bold">{user.email}</span> no está autorizado.
             </p>
             <div className="flex flex-col gap-3">
               <Button onClick={() => signOut(auth)} variant="outline" className="border-white/20 text-white hover:bg-white/5 h-12">
@@ -218,7 +174,6 @@ export default function AdminPage() {
       </header>
 
       <div className="grid gap-8 max-w-4xl mx-auto">
-        {/* State check for empty menu */}
         {menuItems.length === 0 && (
           <Card className="bg-[#00F0FF]/5 border-[#00F0FF]/50 text-white overflow-hidden animate-pulse">
             <CardHeader className="text-center">
@@ -226,7 +181,7 @@ export default function AdminPage() {
               <CardTitle className="font-headline text-[#00F0FF] uppercase">Menú Vacío</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 text-center pb-8">
-              <p className="text-[#B0B0B0] text-sm">Tu base de datos está lista pero no tiene productos. ¿Quieres cargar los clásicos (Maní, Panchos y Fernet) ahora?</p>
+              <p className="text-[#B0B0B0] text-sm">Tu base de datos está lista. ¿Quieres cargar los clásicos ahora?</p>
               <Button onClick={seedInitialData} className="bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#120108] font-bold h-14 px-10 rounded-xl transition-all shadow-[0_0_20px_rgba(0,240,255,0.3)]">
                 <Sparkles className="w-5 h-5 mr-2" /> Activar Menú Dinámico
               </Button>
@@ -244,7 +199,7 @@ export default function AdminPage() {
           <CardContent>
             <form onSubmit={handleAddItem} className="space-y-5">
               <div className="grid gap-2">
-                <Label htmlFor="title" className="text-xs uppercase tracking-widest text-[#B0B0B0]">Nombre del Producto</Label>
+                <Label htmlFor="title" className="text-xs uppercase tracking-widest text-[#B0B0B0]">Nombre</Label>
                 <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Gancia con Limón" className="bg-white/5 border-white/10 h-12 focus:border-[#00F0FF]" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -269,11 +224,11 @@ export default function AdminPage() {
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="desc" className="text-xs uppercase tracking-widest text-[#B0B0B0]">Descripción Corta</Label>
-                <Input id="desc" value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Ej: Refrescante y clásico..." className="bg-white/5 border-white/10 h-12 focus:border-[#00F0FF]" />
+                <Label htmlFor="desc" className="text-xs uppercase tracking-widest text-[#B0B0B0]">Descripción</Label>
+                <Input id="desc" value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Refrescante..." className="bg-white/5 border-white/10 h-12 focus:border-[#00F0FF]" />
               </div>
               <Button type="submit" className="w-full bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#120108] font-bold h-14 text-lg rounded-xl transition-all">
-                Publicar en el Menú
+                Publicar
               </Button>
             </form>
           </CardContent>
@@ -281,29 +236,18 @@ export default function AdminPage() {
 
         {menuItems.length > 0 && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <h2 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Gestión de Productos ({menuItems.length})</h2>
-              <Button onClick={seedInitialData} variant="ghost" size="sm" className="text-[#B0B0B0] hover:text-[#00F0FF] text-[10px] font-bold uppercase">
-                <Sparkles className="w-3 h-3 mr-1" /> Resetear Menú
-              </Button>
-            </div>
+            <h2 className="text-xl font-headline font-bold text-white uppercase tracking-tight">Productos ({menuItems.length})</h2>
             <div className="grid gap-3">
               {menuItems.map((item) => (
                 <div key={item.id} className="flex items-center justify-between p-5 bg-[#1a020c] rounded-2xl border border-white/5 group hover:border-[#FF008A]/30 transition-all">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-[#B0B0B0] uppercase font-bold tracking-tighter">{item.category}</span>
-                      <p className="font-bold text-lg leading-none">{item.title}</p>
+                      <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-[#B0B0B0] uppercase font-bold">{item.category}</span>
+                      <p className="font-bold text-lg">{item.title}</p>
                     </div>
-                    <p className="text-xs text-[#B0B0B0] italic line-clamp-1">{item.description}</p>
-                    <p className="text-[#00F0FF] font-bold mt-1">${item.price.toLocaleString('es-AR')}</p>
+                    <p className="text-[#00F0FF] font-bold">${item.price.toLocaleString('es-AR')}</p>
                   </div>
-                  <Button 
-                    onClick={() => handleDeleteItem(item.id, item.title)} 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-[#B0B0B0] hover:text-destructive hover:bg-destructive/10 h-12 w-12"
-                  >
+                  <Button onClick={() => handleDeleteItem(item.id, item.title)} variant="ghost" size="icon" className="text-[#B0B0B0] hover:text-destructive h-12 w-12">
                     <Trash2 className="w-5 h-5" />
                   </Button>
                 </div>
@@ -315,8 +259,8 @@ export default function AdminPage() {
       
       <div className="fixed bottom-0 left-0 right-0 p-4 flex justify-center bg-[#120108]/80 backdrop-blur-xl border-t border-white/5 z-50">
          <Link href="/">
-          <Button variant="ghost" className="text-[#00F0FF] hover:bg-white/5 font-bold uppercase text-xs tracking-widest">
-             <ArrowLeft className="mr-2 w-4 h-4" /> Ver Vista del Cliente
+          <Button variant="ghost" className="text-[#00F0FF] font-bold uppercase text-xs tracking-widest">
+             <ArrowLeft className="mr-2 w-4 h-4" /> Vista Cliente
           </Button>
          </Link>
       </div>

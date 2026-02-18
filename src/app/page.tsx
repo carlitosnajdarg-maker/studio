@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { CategoryNav } from "@/components/menu/CategoryNav"
 import { MenuCard, MenuItemProps } from "@/components/menu/MenuCard"
 import { QuickActions } from "@/components/menu/QuickActions"
-import { db, auth, isConfigValid } from "@/lib/firebase"
+import { useFirestore, useAuth, useUser } from "@/firebase"
 import { onAuthStateChanged } from "firebase/auth"
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore"
 import { QRCodeSVG } from "qrcode.react"
@@ -25,6 +25,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 const CATEGORIES = ["Todos", "Tragos", "Bebidas c/ Alcohol", "Bebidas s/ Alcohol", "Comidas", "Fichas"]
 
 export default function Home() {
+  const db = useFirestore()
+  const auth = useAuth()
+  const { user } = useUser()
   const [activeCategory, setActiveCategory] = useState("Todos")
   const [menuItems, setMenuItems] = useState<MenuItemProps[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,24 +35,23 @@ export default function Home() {
   const [currentUrl, setCurrentUrl] = useState("")
 
   useEffect(() => {
-    setCurrentUrl(window.location.href)
+    if (typeof window !== "undefined") {
+      setCurrentUrl(window.location.href)
+    }
   }, [])
 
   // Verificación de admin para mostrar botón de configuración
   useEffect(() => {
-    if (!auth) return;
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUserIsAdmin(isAdmin(user?.email))
-    })
-    return () => unsubscribe()
-  }, [])
+    if (user) {
+      setUserIsAdmin(isAdmin(user.email))
+    } else {
+      setUserIsAdmin(false)
+    }
+  }, [user])
 
   // Carga pública del menú desde Firestore
   useEffect(() => {
-    if (!db || !isConfigValid) {
-      setLoading(false)
-      return
-    }
+    if (!db) return
     
     const q = query(collection(db, "menu"), orderBy("createdAt", "desc"))
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -64,7 +66,7 @@ export default function Home() {
       setLoading(false)
     })
     return () => unsubscribe()
-  }, [])
+  }, [db])
 
   const filteredItems = activeCategory === "Todos" 
     ? menuItems 
@@ -72,19 +74,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pb-32 bg-[#120108]">
-      {/* Aviso de configuración faltante si no hay API Key */}
-      {!isConfigValid && (
-        <div className="p-4 max-w-xl mx-auto">
-          <Alert variant="destructive" className="bg-destructive/10 border-destructive/50 text-white backdrop-blur-sm">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle className="font-headline uppercase text-xs tracking-widest">Configuración Pendiente</AlertTitle>
-            <AlertDescription className="text-xs opacity-80">
-              Conecta tu proyecto de Firebase en el panel de Studio para habilitar el menú dinámico.
-            </AlertDescription>
-          </Alert>
-        </div>
-      )}
-
       {/* Header */}
       <header className="px-5 pt-10 pb-6 flex justify-between items-start max-w-4xl mx-auto">
         <div className="flex flex-col gap-1">
@@ -115,7 +104,7 @@ export default function Home() {
               </DialogHeader>
               <div className="flex flex-col items-center gap-6 py-4">
                 <div className="bg-white p-4 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                  <QRCodeSVG value={currentUrl} size={180} />
+                  {currentUrl && <QRCodeSVG value={currentUrl} size={180} />}
                 </div>
                 <p className="text-center text-xs text-[#B0B0B0] px-2 font-medium">Escanea este código para acceder al menú digital de Mr. Smith Bar Pool.</p>
               </div>
@@ -147,11 +136,9 @@ export default function Home() {
         {!loading && filteredItems.length === 0 && (
           <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[32px] bg-white/[0.02]">
             <p className="text-[#B0B0B0] text-sm italic">
-              {!isConfigValid 
-                ? "Conecta Firebase para ver el menú dinámico." 
-                : "No hay productos disponibles en esta sección actualmente."}
+              No hay productos disponibles en esta sección actualmente.
             </p>
-            {userIsAdmin && isConfigValid && (
+            {userIsAdmin && (
               <Link href="/admin">
                 <Button variant="link" className="text-[#FF008A] mt-4 font-bold uppercase text-xs tracking-widest">
                   Añadir productos ahora
