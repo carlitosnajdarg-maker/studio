@@ -2,16 +2,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth, googleProvider, db } from "@/lib/firebase"
+import { auth, googleProvider, db, isConfigValid } from "@/lib/firebase"
 import { signInWithPopup, onAuthStateChanged, User, signOut } from "firebase/auth"
 import { isAdmin } from "@/lib/admin-config"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"
+import { collection, addDoc, deleteDoc, doc, query, onSnapshot } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ArrowLeft } from "lucide-react"
+import { LogOut, Plus, Trash2, ArrowLeft, ShieldCheck, AlertCircle, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminPage() {
@@ -27,29 +27,36 @@ export default function AdminPage() {
   const [description, setDescription] = useState("")
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false)
+      return
+    }
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser)
       setLoading(false)
-      if (currentUser && isAdmin(currentUser.email)) {
-        fetchMenuItems()
-      }
     })
     return () => unsubscribe()
   }, [])
 
-  const fetchMenuItems = async () => {
-    const querySnapshot = await getDocs(collection(db, "menu"))
-    const items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-    setMenuItems(items)
-  }
+  useEffect(() => {
+    if (user && isAdmin(user.email) && db) {
+      const q = query(collection(db, "menu"))
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        setMenuItems(items)
+      })
+      return () => unsubscribe()
+    }
+  }, [user])
 
   const handleLogin = async () => {
+    if (!auth) return
     try {
       await signInWithPopup(auth, googleProvider)
     } catch (error) {
       toast({
-        title: "Error",
-        description: "No se pudo iniciar sesión",
+        title: "Error de conexión",
+        description: "Revisa la configuración de Firebase Authentication.",
         variant: "destructive"
       })
     }
@@ -57,7 +64,7 @@ export default function AdminPage() {
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isAdmin(user?.email)) return
+    if (!isAdmin(user?.email) || !db) return
 
     try {
       await addDoc(collection(db, "menu"), {
@@ -65,46 +72,74 @@ export default function AdminPage() {
         category,
         price: Number(price),
         description,
-        imageUrl: "https://picsum.photos/seed/new/400/500", // Placeholder
-        metadata: "Nuevo"
+        imageUrl: category === "Tragos" ? "https://picsum.photos/seed/drink/400/500" : "https://picsum.photos/seed/food/400/500",
+        metadata: "Nuevo",
+        createdAt: new Date().toISOString()
       })
       setTitle("")
       setPrice("")
       setDescription("")
-      fetchMenuItems()
-      toast({ title: "Éxito", description: "Ítem añadido al menú" })
+      toast({ title: "Producto añadido", description: `${title} ya está en el menú.` })
     } catch (error) {
-      toast({ title: "Error", description: "No se pudo añadir el ítem", variant: "destructive" })
+      toast({ title: "Error", description: "No se pudo guardar.", variant: "destructive" })
     }
   }
 
-  const handleDeleteItem = async (id: string) => {
-    if (!isAdmin(user?.email)) return
+  const handleDeleteItem = async (id: string, name: string) => {
+    if (!isAdmin(user?.email) || !db) return
+    if (!confirm(`¿Estás seguro de eliminar "${name}"?`)) return
+
     try {
       await deleteDoc(doc(db, "menu", id))
-      fetchMenuItems()
-      toast({ title: "Eliminado", description: "El ítem ha sido quitado" })
+      toast({ title: "Eliminado", description: "Producto quitado." })
     } catch (error) {
-      toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" })
+      toast({ title: "Error", description: "No se pudo eliminar.", variant: "destructive" })
     }
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-[#FF008A]">Cargando...</div>
+  if (!isConfigValid) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#120108] p-5">
+        <Card className="bg-[#1a020c] border-destructive/50 text-white max-w-md text-center">
+          <CardHeader>
+            <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-2" />
+            <CardTitle className="text-xl font-headline uppercase">Firebase no configurado</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-[#B0B0B0]">Las credenciales de Firebase no son válidas o faltan.</p>
+            <Link href="/" className="text-[#00F0FF] hover:underline flex items-center justify-center gap-2">
+              <ArrowLeft className="w-4 h-4" /> Volver al menú
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#120108]">
+      <div className="text-[#FF008A] font-bold animate-bounce text-xl font-headline uppercase">Accediendo al panel...</div>
+    </div>
+  )
 
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#120108] p-5">
-        <Card className="w-full max-w-md bg-[#1a020c] border-[#FF008A]/30 text-white">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-headline text-[#FF008A]">Acceso Admin</CardTitle>
+        <Card className="w-full max-w-md bg-[#1a020c] border-[#FF008A]/30 text-white overflow-hidden shadow-2xl">
+          <div className="h-2 bg-[#FF008A]"></div>
+          <CardHeader className="text-center pt-8">
+            <ShieldCheck className="w-12 h-12 text-[#FF008A] mx-auto mb-4" />
+            <CardTitle className="text-3xl font-headline text-white uppercase">Panel Administrativo</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <p className="text-[#B0B0B0] text-center">Inicia sesión para gestionar el bar.</p>
-            <Button onClick={handleLogin} className="bg-[#FF008A] hover:bg-[#FF008A]/80 text-white font-bold h-12">
+          <CardContent className="flex flex-col gap-6 pb-10">
+            <p className="text-[#B0B0B0] text-center px-4">
+              Solo el personal autorizado de <strong>Mr. Smith</strong> puede gestionar el menú.
+            </p>
+            <Button onClick={handleLogin} className="bg-[#FF008A] hover:bg-[#FF008A]/80 text-white font-bold h-14 text-lg rounded-xl transition-all shadow-lg hover:shadow-[#FF008A]/20">
               Entrar con Google
             </Button>
-            <Link href="/" className="text-center text-xs text-[#00F0FF] hover:underline mt-2 flex items-center justify-center gap-1">
-              <ArrowLeft className="w-3 h-3" /> Volver al menú
+            <Link href="/" className="text-center text-sm text-[#00F0FF] hover:underline flex items-center justify-center gap-2 mt-2 opacity-70 hover:opacity-100">
+              <ArrowLeft className="w-4 h-4" /> Volver al menú público
             </Link>
           </CardContent>
         </Card>
@@ -115,16 +150,21 @@ export default function AdminPage() {
   if (!isAdmin(user.email)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#120108] p-5">
-        <Card className="w-full max-w-md bg-[#1a020c] border-destructive text-white text-center">
-          <CardHeader>
-            <CardTitle className="text-2xl text-destructive font-headline">Acceso Denegado</CardTitle>
+        <Card className="w-full max-w-md bg-[#1a020c] border-destructive/50 text-white text-center shadow-2xl">
+          <CardHeader className="pt-8">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <CardTitle className="text-2xl text-destructive font-headline uppercase">Acceso Denegado</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-[#B0B0B0]">Tu correo ({user.email}) no está en la lista blanca.</p>
-            <Button onClick={() => signOut(auth)} variant="outline" className="border-white/20 text-white">
-              Cerrar Sesión
-            </Button>
-            <Link href="/" className="block text-[#00F0FF] hover:underline text-sm">Volver al inicio</Link>
+          <CardContent className="space-y-6 pb-10">
+            <p className="text-[#B0B0B0]">
+              Tu correo <span className="text-white font-bold">{user.email}</span> no está autorizado.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button onClick={() => signOut(auth)} variant="outline" className="border-white/20 text-white hover:bg-white/5">
+                Cerrar Sesión
+              </Button>
+              <Link href="/" className="block text-[#00F0FF] hover:underline text-sm">Volver al inicio</Link>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -132,39 +172,42 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#120108] text-white p-5 pb-20">
-      <header className="flex justify-between items-center mb-10">
+    <div className="min-h-screen bg-[#120108] text-white p-5 pb-24">
+      <header className="flex justify-between items-center mb-10 max-w-4xl mx-auto">
         <div>
-          <h1 className="text-2xl font-headline font-bold text-[#FF008A]">Panel de Control</h1>
-          <p className="text-xs text-[#B0B0B0]">{user.email}</p>
+          <h1 className="text-2xl font-headline font-bold text-[#FF008A] uppercase tracking-tight">Panel de Control</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+            <p className="text-xs text-[#B0B0B0] font-medium">{user.email}</p>
+          </div>
         </div>
-        <Button onClick={() => signOut(auth)} size="icon" variant="ghost" className="text-white hover:bg-[#FF008A]">
-          <LogOut className="w-5 h-5" />
+        <Button onClick={() => signOut(auth)} size="icon" variant="ghost" className="text-white hover:bg-destructive/20 hover:text-destructive rounded-full h-12 w-12 transition-colors">
+          <LogOut className="w-6 h-6" />
         </Button>
       </header>
 
-      <div className="grid gap-8">
-        {/* Formulario de Añadir */}
-        <Card className="bg-[#1a020c] border-[#00F0FF]/30 text-white">
+      <div className="grid gap-8 max-w-4xl mx-auto">
+        <Card className="bg-[#1a020c] border-[#00F0FF]/30 text-white shadow-xl overflow-hidden">
+          <div className="h-1 bg-[#00F0FF]"></div>
           <CardHeader>
-            <CardTitle className="text-[#00F0FF] flex items-center gap-2">
-              <Plus className="w-5 h-5" /> Añadir Nuevo Ítem
+            <CardTitle className="text-[#00F0FF] flex items-center gap-2 font-headline text-xl uppercase">
+              <Plus className="w-6 h-6" /> Nuevo Producto
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleAddItem} className="space-y-4">
+            <form onSubmit={handleAddItem} className="space-y-5">
               <div className="grid gap-2">
-                <Label htmlFor="title">Nombre del Producto</Label>
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required className="bg-white/5 border-white/10" />
+                <Label htmlFor="title" className="text-xs uppercase tracking-widest text-[#B0B0B0]">Nombre del Producto</Label>
+                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Fernet con Coca" className="bg-white/5 border-white/10 h-12 text-lg focus:border-[#00F0FF]" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="grid gap-2">
-                  <Label htmlFor="category">Categoría</Label>
+                  <Label htmlFor="category" className="text-xs uppercase tracking-widest text-[#B0B0B0]">Categoría</Label>
                   <select 
                     id="category" 
                     value={category} 
                     onChange={(e) => setCategory(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                    className="flex h-12 w-full rounded-md border border-white/10 bg-[#1a020c] px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#00F0FF]"
                   >
                     <option value="Tragos">Tragos</option>
                     <option value="Bebidas c/ Alcohol">Bebidas c/ Alcohol</option>
@@ -174,49 +217,58 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="price">Precio (ARS)</Label>
-                  <Input id="price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} required className="bg-white/5 border-white/10" />
+                  <Label htmlFor="price" className="text-xs uppercase tracking-widest text-[#B0B0B0]">Precio (ARS)</Label>
+                  <Input id="price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="3500" className="bg-white/5 border-white/10 h-12 text-lg focus:border-[#00F0FF]" />
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="desc">Descripción</Label>
-                <Input id="desc" value={description} onChange={(e) => setDescription(e.target.value)} required className="bg-white/5 border-white/10" />
+                <Label htmlFor="desc" className="text-xs uppercase tracking-widest text-[#B0B0B0]">Descripción Corta</Label>
+                <Input id="desc" value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Breve detalle del producto..." className="bg-white/5 border-white/10 h-12 focus:border-[#00F0FF]" />
               </div>
-              <Button type="submit" className="w-full bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#120108] font-bold">
-                Guardar Producto
+              <Button type="submit" className="w-full bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#120108] font-bold h-14 text-lg rounded-xl transition-all shadow-lg hover:shadow-[#00F0FF]/20">
+                Publicar en el Menú
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Lista Actual */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-white border-b border-white/10 pb-2">Menú Actual</h2>
+          <div className="flex justify-between items-center border-b border-white/10 pb-4">
+            <h2 className="text-xl font-headline font-bold text-white uppercase">Menú Actual ({menuItems.length})</h2>
+          </div>
           <div className="grid gap-3">
             {menuItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-4 bg-[#1a020c] rounded-xl border border-white/5">
-                <div>
-                  <p className="font-bold">{item.title}</p>
-                  <p className="text-xs text-[#B0B0B0]">{item.category} • ${item.price.toLocaleString('es-AR')}</p>
+              <div key={item.id} className="flex items-center justify-between p-5 bg-[#1a020c] rounded-2xl border border-white/5 group hover:border-[#FF008A]/30 transition-all">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-[#B0B0B0] uppercase font-bold tracking-tighter">{item.category}</span>
+                    <p className="font-bold text-lg leading-none">{item.title}</p>
+                  </div>
+                  <p className="text-xs text-[#B0B0B0] italic line-clamp-1">{item.description}</p>
+                  <p className="text-[#00F0FF] font-bold mt-1">${item.price.toLocaleString('es-AR')}</p>
                 </div>
                 <Button 
-                  onClick={() => handleDeleteItem(item.id)} 
+                  onClick={() => handleDeleteItem(item.id, item.title)} 
                   variant="ghost" 
                   size="icon" 
-                  className="text-[#B0B0B0] hover:text-destructive hover:bg-destructive/10"
+                  className="text-[#B0B0B0] hover:text-destructive hover:bg-destructive/10 rounded-xl h-12 w-12"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-5 h-5" />
                 </Button>
               </div>
             ))}
-            {menuItems.length === 0 && <p className="text-center text-[#B0B0B0] py-10">No hay productos en la base de datos.</p>}
+            {menuItems.length === 0 && (
+              <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl">
+                <p className="text-[#B0B0B0] font-medium">Aún no hay productos publicados.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
       
-      <div className="fixed bottom-0 left-0 right-0 p-4 flex justify-center bg-background/50 backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 p-4 flex justify-center bg-[#120108]/80 backdrop-blur-xl border-t border-white/5">
          <Link href="/">
-          <Button variant="ghost" className="text-[#00F0FF] hover:bg-white/5 font-bold">
+          <Button variant="ghost" className="text-[#00F0FF] hover:bg-white/5 font-bold h-12 rounded-xl px-8">
              <ArrowLeft className="mr-2 w-4 h-4" /> Ver Menú Público
           </Button>
          </Link>

@@ -1,5 +1,5 @@
 
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -12,9 +12,20 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Verificar si la configuración es válida para evitar crashes
+const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "undefined";
+
+let app;
+let auth: any = null;
+let db: any = null;
 const googleProvider = new GoogleAuthProvider();
 
-export { auth, db, googleProvider };
+if (isConfigValid) {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  auth = getAuth(app);
+  db = getFirestore(app);
+} else {
+  console.warn("Firebase: Las variables de entorno no están configuradas correctamente.");
+}
+
+export { auth, db, googleProvider, isConfigValid };
