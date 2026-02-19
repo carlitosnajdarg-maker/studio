@@ -120,8 +120,18 @@ export default function AdminPage() {
       if (error.code === 'auth/unauthorized-domain') {
         const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'tu-dominio'
         setAuthError(currentDomain)
+      } else if (error.code === 'auth/popup-blocked') {
+        toast({ 
+          title: "Error de login", 
+          description: "La ventana de inicio de sesión fue bloqueada por el navegador. Por favor, permite las ventanas emergentes (pop-ups) para este sitio.", 
+          variant: "destructive" 
+        })
       } else {
-        toast({ title: "Error de login", description: error.message || "Intenta nuevamente.", variant: "destructive" })
+        toast({ 
+          title: "Error de login", 
+          description: `Firebase: Error (${error.code || "desconocido"}).`, 
+          variant: "destructive" 
+        })
       }
     }
   }
@@ -280,13 +290,15 @@ export default function AdminPage() {
   if (!user || (!isActualAdmin && !staffProfile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#120108] p-5">
-        <Card className="w-full max-w-md bg-[#1a020c] border-[#FF008A]/30 text-white">
-          <CardHeader className="text-center">
-            <ShieldCheck className="w-12 h-12 text-[#FF008A] mx-auto mb-4" />
+        <Card className="w-full max-w-md bg-[#1a020c] border-[#FF008A]/30 text-white shadow-2xl">
+          <CardHeader className="text-center pt-10">
+            <div className="bg-[#FF008A]/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#FF008A]/30">
+              <ShieldCheck className="w-10 h-10 text-[#FF008A]" />
+            </div>
             <CardTitle className="text-2xl font-headline uppercase tracking-tighter">Acceso Staff Mr. Smith</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4 text-center">
-            <p className="text-sm text-[#B0B0B0]">Ingresa con tu cuenta de Google autorizada por la gerencia.</p>
+          <CardContent className="flex flex-col gap-6 text-center pb-10">
+            <p className="text-sm text-[#B0B0B0] px-4">Ingresa con tu cuenta de Google autorizada por la gerencia.</p>
             
             {authError && (
               <Alert variant="destructive" className="text-left bg-red-950/50 border-red-500/50">
@@ -308,11 +320,13 @@ export default function AdminPage() {
             )}
 
             {!user ? (
-              <Button onClick={handleLogin} className="bg-[#FF008A] h-14 font-bold text-lg neon-glow-magenta w-full">Entrar con Google</Button>
+              <Button onClick={handleLogin} className="bg-[#FF008A] h-14 font-bold text-lg neon-glow-magenta w-full rounded-2xl transition-transform active:scale-95">
+                Entrar con Google
+              </Button>
             ) : (
               <div className="space-y-4">
-                <p className="text-red-400 text-xs font-bold">Usuario no autorizado: {user.email}</p>
-                <Button onClick={() => signOut(auth)} variant="outline" className="w-full">Cerrar Sesión</Button>
+                <p className="text-red-400 text-xs font-bold bg-red-400/10 py-3 rounded-lg border border-red-400/20">Usuario no autorizado: {user.email}</p>
+                <Button onClick={() => signOut(auth)} variant="outline" className="w-full border-white/10 hover:bg-white/5">Cerrar Sesión</Button>
               </div>
             )}
           </CardContent>
