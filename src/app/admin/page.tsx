@@ -12,8 +12,9 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Play, Pause, Square, AlertCircle, ExternalLink, MousePointerClick } from "lucide-react"
+import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Play, Pause, Square, AlertCircle, ExternalLink, MousePointerClick, ChevronLeft } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function AdminPage() {
@@ -303,44 +304,43 @@ export default function AdminPage() {
           <CardContent className="flex flex-col gap-6 text-center pb-10">
             <p className="text-sm text-[#B0B0B0] px-4">Ingresa con tu cuenta de Google autorizada por la gerencia.</p>
             
+            <div className="flex flex-col gap-3">
+              {!user ? (
+                <Button onClick={handleLogin} className="bg-[#FF008A] h-14 font-bold text-lg neon-glow-magenta w-full rounded-2xl transition-transform active:scale-95">
+                  Entrar con Google
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-red-400 text-xs font-bold bg-red-400/10 py-3 rounded-lg border border-red-400/20">Usuario no autorizado: {user.email}</p>
+                  <Button onClick={() => signOut(auth)} variant="outline" className="w-full border-white/10 hover:bg-white/5">Cerrar Sesión</Button>
+                </div>
+              )}
+              <Link href="/">
+                <Button variant="ghost" className="w-full text-white/40 text-xs font-bold uppercase tracking-widest">
+                  <ChevronLeft className="w-3 h-3 mr-1" /> Volver al Menú Principal
+                </Button>
+              </Link>
+            </div>
+
             {showPopupHint && (
-              <Alert className="text-left bg-[#FF008A]/10 border-[#FF008A]/40 text-white">
+              <Alert className="text-left bg-[#FF008A]/10 border-[#FF008A]/40 text-white mt-4">
                 <MousePointerClick className="h-4 w-4 text-[#FF008A]" />
                 <AlertTitle className="text-[#FF008A] font-bold">Ventana Bloqueada</AlertTitle>
                 <AlertDescription className="text-xs">
-                  Tu navegador bloqueó la ventana de Google. Haz clic en el icono de la <b>barra de direcciones</b> (arriba a la derecha) y selecciona <b>"Permitir siempre ventanas emergentes"</b> para este sitio.
+                  Tu navegador bloqueó la ventana de Google. Haz clic en el icono de la barra de direcciones y selecciona permitir siempre ventanas emergentes.
                 </AlertDescription>
               </Alert>
             )}
 
             {authError && (
-              <Alert variant="destructive" className="text-left bg-red-950/50 border-red-500/50">
+              <Alert variant="destructive" className="text-left bg-red-950/50 border-red-500/50 mt-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Dominio no autorizado</AlertTitle>
                 <AlertDescription className="text-[11px] mt-2">
                   <p className="mb-2">Debes autorizar este dominio en tu consola de Firebase:</p>
                   <code className="block bg-black/50 p-2 rounded mb-2 select-all font-mono">{authError}</code>
-                  <a 
-                    href="https://console.firebase.google.com/project/_/authentication/settings" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[#00F0FF] hover:underline font-bold"
-                  >
-                    Ir a Configuración <ExternalLink className="w-3 h-3" />
-                  </a>
                 </AlertDescription>
               </Alert>
-            )}
-
-            {!user ? (
-              <Button onClick={handleLogin} className="bg-[#FF008A] h-14 font-bold text-lg neon-glow-magenta w-full rounded-2xl transition-transform active:scale-95">
-                Entrar con Google
-              </Button>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-red-400 text-xs font-bold bg-red-400/10 py-3 rounded-lg border border-red-400/20">Usuario no autorizado: {user.email}</p>
-                <Button onClick={() => signOut(auth)} variant="outline" className="w-full border-white/10 hover:bg-white/5">Cerrar Sesión</Button>
-              </div>
             )}
           </CardContent>
         </Card>
@@ -362,7 +362,14 @@ export default function AdminPage() {
             <p className="text-[10px] text-[#B0B0B0] font-bold">{user.email}</p>
           </div>
         </div>
-        <Button onClick={() => signOut(auth)} size="sm" variant="ghost" className="rounded-full text-white/60"><LogOut className="w-4 h-4 mr-2" /> Salir</Button>
+        <div className="flex items-center gap-2">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="rounded-full text-[#00F0FF] hover:bg-[#00F0FF]/10 font-bold text-xs uppercase">
+              <ChevronLeft className="w-4 h-4 mr-1" /> Menú
+            </Button>
+          </Link>
+          <Button onClick={() => signOut(auth)} size="sm" variant="ghost" className="rounded-full text-white/40 hover:text-red-500"><LogOut className="w-4 h-4" /></Button>
+        </div>
       </header>
 
       {/* RELOJ DE JORNADA */}
