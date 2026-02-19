@@ -12,8 +12,9 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Play, Pause, Square, Timer, Globe, Rocket, Copy, CheckCircle2 } from "lucide-react"
+import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Play, Pause, Square, AlertCircle, ExternalLink } from "lucide-react"
 import Image from "next/image"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function AdminPage() {
   const auth = useAuth()
@@ -25,6 +26,7 @@ export default function AdminPage() {
   const [menuItems, setMenuItems] = useState<any[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
   
   // Form states
   const [title, setTitle] = useState("")
@@ -54,7 +56,7 @@ export default function AdminPage() {
   const isActualOwner = isOwner(user?.email) || staffProfile?.role === 'Dueño'
   const isActualAdmin = isAdmin(user?.email) || staffProfile?.role === 'Gerente' || isActualOwner
 
-  // Conditional queries - Only run if user is authenticated to avoid permission errors
+  // Conditional queries
   const rolesQuery = useMemoFirebase(() => 
     user ? query(collection(db, "custom_roles"), orderBy("name", "asc")) : null, 
     [db, user]
@@ -77,7 +79,7 @@ export default function AdminPage() {
         
         if (staffProfile.activeSession.status === "paused") {
           const pauseStart = new Date(staffProfile.activeSession.pauseStartTime).getTime();
-          now = pauseStart; // Locked at pause time
+          now = pauseStart;
         }
 
         const diff = Math.max(0, now - start - pausedMins);
@@ -109,11 +111,18 @@ export default function AdminPage() {
   }, [user, db])
 
   const handleLogin = async () => {
+    setAuthError(null)
     const provider = new GoogleAuthProvider()
     try {
       await signInWithPopup(auth, provider)
     } catch (error: any) {
-      toast({ title: "Error de login", description: "Verifica los dominios autorizados.", variant: "destructive" })
+      console.error("Login Error:", error)
+      if (error.code === 'auth/unauthorized-domain') {
+        const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'tu-dominio'
+        setAuthError(currentDomain)
+      } else {
+        toast({ title: "Error de login", description: error.message || "Intenta nuevamente.", variant: "destructive" })
+      }
     }
   }
 
@@ -278,6 +287,26 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-4 text-center">
             <p className="text-sm text-[#B0B0B0]">Ingresa con tu cuenta de Google autorizada por la gerencia.</p>
+            
+            {authError && (
+              <Alert variant="destructive" className="text-left bg-red-950/50 border-red-500/50">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Dominio no autorizado</AlertTitle>
+                <AlertDescription className="text-[11px] mt-2">
+                  <p className="mb-2">Debes autorizar este dominio en tu consola de Firebase:</p>
+                  <code className="block bg-black/50 p-2 rounded mb-2 select-all font-mono">{authError}</code>
+                  <a 
+                    href="https://console.firebase.google.com/project/_/authentication/settings" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[#00F0FF] hover:underline font-bold"
+                  >
+                    Ir a Configuración <ExternalLink className="w-3 h-3" />
+                  </a>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {!user ? (
               <Button onClick={handleLogin} className="bg-[#FF008A] h-14 font-bold text-lg neon-glow-magenta w-full">Entrar con Google</Button>
             ) : (
