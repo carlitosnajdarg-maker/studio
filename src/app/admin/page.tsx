@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -133,7 +134,7 @@ export default function AdminPage() {
 
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!db) return
+    if (!db || !isActualAdmin) return
     try {
       const itemData = {
         title, category, price: Number(price), description, imageUrl: imageUrl || "https://picsum.photos/seed/default/400/500",
@@ -308,7 +309,7 @@ export default function AdminPage() {
         <Button onClick={() => signOut(auth)} size="sm" variant="ghost" className="rounded-full text-white/60"><LogOut className="w-4 h-4 mr-2" /> Salir</Button>
       </header>
 
-      {/* RELOJ DE JORNADA - BASADO EN TU PLAN */}
+      {/* RELOJ DE JORNADA */}
       {staffProfile && (
         <Card className="bg-[#1a020c] border-[#00F0FF]/40 mb-8 neon-glow-cyan overflow-hidden shadow-2xl">
           <div className="bg-[#00F0FF]/10 px-6 py-3 border-b border-[#00F0FF]/20 flex justify-between items-center">
@@ -358,41 +359,7 @@ export default function AdminPage() {
         </Card>
       )}
 
-      {/* GUIA DE LANZAMIENTO PUBLICA */}
-      {isActualAdmin && (
-        <Card className="bg-blue-600/10 border-blue-500/30 mb-8 overflow-hidden">
-          <CardHeader className="pb-2 border-b border-blue-500/20">
-            <CardTitle className="text-[10px] font-headline uppercase text-blue-400 flex items-center gap-2 tracking-widest">
-              <Rocket className="w-4 h-4" /> Cómo hacer público el menú (Plan Spark)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-4 text-[11px] text-white/80">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-              <div>
-                <p className="font-bold text-white">Paso 1: Copiar URL del Hosting</p>
-                <p>Busca en Firebase Console &gt; Hosting tu URL (ej: mrsmith.web.app).</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-              <div>
-                <p className="font-bold text-white">Paso 2: Autorizar en Authentication</p>
-                <p>Añade esa URL en Authentication &gt; Settings &gt; Authorized domains para que el staff pueda loguearse.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-              <div>
-                <p className="font-bold text-white">Paso 3: Actualizar el Código QR</p>
-                <p>Ve a la Home, abre el QR y pega tu URL de Hosting para que los clientes entren directo.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Tabs defaultValue="menu">
+      <Tabs defaultValue={staffProfile ? "menu" : "history"}>
         <TabsList className="grid grid-cols-4 h-auto w-full bg-[#1a020c] mb-6 p-1 border border-white/5">
           <TabsTrigger value="menu" className="uppercase font-bold text-[9px] py-3 data-[state=active]:bg-[#FF008A]">Productos</TabsTrigger>
           <TabsTrigger value="staff" className="uppercase font-bold text-[9px] py-3 data-[state=active]:bg-[#00F0FF] data-[state=active]:text-[#120108]">Staff</TabsTrigger>
@@ -401,32 +368,34 @@ export default function AdminPage() {
         </TabsList>
 
         <TabsContent value="menu" className="space-y-6">
-          <Card className="bg-[#1a020c] border-[#FF008A]/30">
-            <CardHeader><CardTitle className="text-sm font-headline uppercase text-[#FF008A]">Gestión de Menú</CardTitle></CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveItem} className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre</Label><Input value={title} onChange={e => setTitle(e.target.value)} required className="bg-white/5 border-white/10 h-11" /></div>
-                <div className="space-y-1"><Label className="text-[10px] uppercase">Categoría</Label>
-                  <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-11 px-3 text-sm text-white">
-                    <option value="Tragos">Tragos</option><option value="Bebidas c/ Alcohol">Bebidas c/ Alcohol</option><option value="Bebidas s/ Alcohol">Bebidas s/ Alcohol</option><option value="Comidas">Comidas</option><option value="Fichas">Fichas</option>
-                  </select>
-                </div>
-                <div className="space-y-1"><Label className="text-[10px] uppercase">Precio ($)</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="bg-white/5 border-white/10 h-11" /></div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] uppercase">Foto del Producto</Label>
-                  <div className="flex gap-2">
-                    <Input value={imageUrl.startsWith('data:') ? "Foto Seleccionada" : imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="Link o sube archivo" className="bg-white/5 border-white/10 h-11" />
-                    <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} className="shrink-0 border-[#00F0FF]/30 text-[#00F0FF] h-11 w-11"><Upload className="w-5 h-5" /></Button>
-                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+          {isActualAdmin && (
+            <Card className="bg-[#1a020c] border-[#FF008A]/30">
+              <CardHeader><CardTitle className="text-sm font-headline uppercase text-[#FF008A]">Gestión de Menú</CardTitle></CardHeader>
+              <CardContent>
+                <form onSubmit={handleSaveItem} className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Nombre</Label><Input value={title} onChange={e => setTitle(e.target.value)} required className="bg-white/5 border-white/10 h-11" /></div>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Categoría</Label>
+                    <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-[#120108] border border-white/10 rounded-md h-11 px-3 text-sm text-white">
+                      <option value="Tragos">Tragos</option><option value="Bebidas c/ Alcohol">Bebidas c/ Alcohol</option><option value="Bebidas s/ Alcohol">Bebidas s/ Alcohol</option><option value="Comidas">Comidas</option><option value="Fichas">Fichas</option>
+                    </select>
                   </div>
-                </div>
-                <div className="md:col-span-2 space-y-1"><Label className="text-[10px] uppercase">Descripción Corta</Label><Input value={description} onChange={e => setDescription(e.target.value)} className="bg-white/5 border-white/10 h-11" /></div>
-                <Button type="submit" className="md:col-span-2 bg-[#FF008A] hover:bg-[#FF008A]/80 font-bold uppercase py-6 shadow-lg">
-                  {editingId ? 'Guardar Cambios' : 'Añadir al Menú'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                  <div className="space-y-1"><Label className="text-[10px] uppercase">Precio ($)</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="bg-white/5 border-white/10 h-11" /></div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase">Foto del Producto</Label>
+                    <div className="flex gap-2">
+                      <Input value={imageUrl.startsWith('data:') ? "Foto Seleccionada" : imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="Link o sube archivo" className="bg-white/5 border-white/10 h-11" />
+                      <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} className="shrink-0 border-[#00F0FF]/30 text-[#00F0FF] h-11 w-11"><Upload className="w-5 h-5" /></Button>
+                      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 space-y-1"><Label className="text-[10px] uppercase">Descripción Corta</Label><Input value={description} onChange={e => setDescription(e.target.value)} className="bg-white/5 border-white/10 h-11" /></div>
+                  <Button type="submit" className="md:col-span-2 bg-[#FF008A] hover:bg-[#FF008A]/80 font-bold uppercase py-6 shadow-lg">
+                    {editingId ? 'Guardar Cambios' : 'Añadir al Menú'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid gap-3">
             {menuItems.map(item => (
@@ -442,8 +411,12 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button onClick={() => { setEditingId(item.id); setTitle(item.title); setCategory(item.category); setPrice(item.price.toString()); setDescription(item.description); setImageUrl(item.imageUrl); }} variant="ghost" size="icon" className="h-10 w-10 text-white/40 hover:text-[#00F0FF]"><Edit2 className="w-4 h-4" /></Button>
-                  {isActualAdmin && <Button onClick={async () => { if(confirm('¿Eliminar producto?')) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="h-10 w-10 text-white/40 hover:text-red-500"><Trash2 className="w-4 h-4" /></Button>}
+                  {isActualAdmin && (
+                    <>
+                      <Button onClick={() => { setEditingId(item.id); setTitle(item.title); setCategory(item.category); setPrice(item.price.toString()); setDescription(item.description); setImageUrl(item.imageUrl); }} variant="ghost" size="icon" className="h-10 w-10 text-white/40 hover:text-[#00F0FF]"><Edit2 className="w-4 h-4" /></Button>
+                      <Button onClick={async () => { if(confirm('¿Eliminar producto?')) await deleteDoc(doc(db!, "menu", item.id)) }} variant="ghost" size="icon" className="h-10 w-10 text-white/40 hover:text-red-500"><Trash2 className="w-4 h-4" /></Button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -516,21 +489,29 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {allLogs?.map(log => (
-                  <div key={log.id} className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                    <div className="flex gap-4 items-center">
-                      <div className="bg-green-600/20 p-2 rounded-lg"><Clock className="w-5 h-5 text-green-500" /></div>
-                      <div>
-                        <p className="font-bold text-white text-sm">{log.staffName}</p>
-                        <p className="text-[10px] text-white/40">{new Date(log.startTime).toLocaleDateString('es-AR')} • {new Date(log.startTime).toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})}</p>
+                {allLogs ? (
+                  allLogs.length > 0 ? (
+                    allLogs.map(log => (
+                      <div key={log.id} className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                        <div className="flex gap-4 items-center">
+                          <div className="bg-green-600/20 p-2 rounded-lg"><Clock className="w-5 h-5 text-green-500" /></div>
+                          <div>
+                            <p className="font-bold text-white text-sm">{log.staffName}</p>
+                            <p className="text-[10px] text-white/40">{new Date(log.startTime).toLocaleDateString('es-AR')} • {new Date(log.startTime).toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-500 text-lg">{Math.floor(log.durationMinutes/60)}h {log.durationMinutes%60}m</p>
+                          <p className="text-[10px] text-yellow-500/60 font-bold uppercase tracking-tight">Neto (Pausa: {log.pausedMinutes || 0}m)</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-green-500 text-lg">{Math.floor(log.durationMinutes/60)}h {log.durationMinutes%60}m</p>
-                      <p className="text-[10px] text-yellow-500/60 font-bold uppercase tracking-tight">Neto (Pausa: {log.pausedMinutes || 0}m)</p>
-                    </div>
-                  </div>
-                ))}
+                    ))
+                  ) : (
+                    <p className="text-center text-white/40 py-10">No hay registros de jornada todavía.</p>
+                  )
+                ) : (
+                  <p className="text-center text-white/40 py-10 italic">Solo la gerencia puede ver el historial detallado.</p>
+                )}
               </div>
             </CardContent>
           </Card>

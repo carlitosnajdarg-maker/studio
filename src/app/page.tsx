@@ -17,7 +17,7 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { QrCode, Settings, Loader2, Info, AlertCircle, Globe, ShieldCheck, Lock } from "lucide-react"
+import { QrCode, Settings, Loader2, Info, AlertCircle, Globe, ShieldCheck, Lock, UserCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
@@ -50,6 +50,7 @@ export default function Home() {
   
   const userProfile = staffList?.find(s => s.email?.toLowerCase() === user?.email?.toLowerCase())
   const userIsGerenteOrOwner = isAdmin(user?.email) || userProfile?.role === 'Gerente' || userProfile?.role === 'Dueño' || isOwner(user?.email)
+  const userIsStaff = !!userProfile || userIsGerenteOrOwner
 
   useEffect(() => {
     if (!db) return
@@ -87,10 +88,10 @@ export default function Home() {
         </div>
         
         <div className="flex gap-2">
-          {userIsGerenteOrOwner && (
+          {userIsStaff && (
             <Link href="/admin">
               <Button size="icon" variant="ghost" className="text-[#00F0FF] hover:bg-[#00F0FF]/10 mt-1 rounded-full border border-[#00F0FF]/20">
-                <Settings className="w-5 h-5" />
+                <UserCog className="w-5 h-5" />
               </Button>
             </Link>
           )}
