@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { collection, addDoc, deleteDoc, doc, query, onSnapshot, orderBy, updateDoc, serverTimestamp } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Play, Pause, Square, AlertCircle, ExternalLink } from "lucide-react"
+import { LogOut, Plus, Trash2, ShieldCheck, Clock, Star, UserCircle, Edit2, Upload, Play, Pause, Square, AlertCircle, ExternalLink, MousePointerClick } from "lucide-react"
 import Image from "next/image"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
@@ -27,6 +27,7 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null)
   const [authError, setAuthError] = useState<string | null>(null)
+  const [showPopupHint, setShowPopupHint] = useState(false)
   
   // Form states
   const [title, setTitle] = useState("")
@@ -112,6 +113,7 @@ export default function AdminPage() {
 
   const handleLogin = async () => {
     setAuthError(null)
+    setShowPopupHint(false)
     const provider = new GoogleAuthProvider()
     try {
       await signInWithPopup(auth, provider)
@@ -121,9 +123,10 @@ export default function AdminPage() {
         const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'tu-dominio'
         setAuthError(currentDomain)
       } else if (error.code === 'auth/popup-blocked') {
+        setShowPopupHint(true)
         toast({ 
-          title: "Error de login", 
-          description: "La ventana de inicio de sesión fue bloqueada por el navegador. Por favor, permite las ventanas emergentes (pop-ups) para este sitio.", 
+          title: "Ventana bloqueada", 
+          description: "Por favor, permite las ventanas emergentes en tu navegador para poder iniciar sesión.", 
           variant: "destructive" 
         })
       } else {
@@ -300,6 +303,16 @@ export default function AdminPage() {
           <CardContent className="flex flex-col gap-6 text-center pb-10">
             <p className="text-sm text-[#B0B0B0] px-4">Ingresa con tu cuenta de Google autorizada por la gerencia.</p>
             
+            {showPopupHint && (
+              <Alert className="text-left bg-[#FF008A]/10 border-[#FF008A]/40 text-white">
+                <MousePointerClick className="h-4 w-4 text-[#FF008A]" />
+                <AlertTitle className="text-[#FF008A] font-bold">Ventana Bloqueada</AlertTitle>
+                <AlertDescription className="text-xs">
+                  Tu navegador bloqueó la ventana de Google. Haz clic en el icono de la <b>barra de direcciones</b> (arriba a la derecha) y selecciona <b>"Permitir siempre ventanas emergentes"</b> para este sitio.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {authError && (
               <Alert variant="destructive" className="text-left bg-red-950/50 border-red-500/50">
                 <AlertCircle className="h-4 w-4" />
