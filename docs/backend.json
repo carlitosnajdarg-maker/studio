@@ -85,6 +85,18 @@
       },
       "required": ["id", "staffId", "score", "createdAt"]
     },
+    "GalleryPost": {
+      "title": "GalleryPost",
+      "type": "object",
+      "description": "Fotos compartidas por los clientes.",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["imageUrl", "comment"]
+    },
     "Settings": {
       "title": "Settings",
       "type": "object",
@@ -118,6 +130,10 @@
       {
         "path": "/ratings/{ratingId}",
         "definition": { "entityName": "Rating", "description": "Calificaciones del staff." }
+      },
+      {
+        "path": "/gallery/{postId}",
+        "definition": { "entityName": "GalleryPost", "description": "Galería pública de clientes." }
       },
       {
         "path": "/settings/general",
